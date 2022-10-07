@@ -41,5 +41,12 @@ reWL = wldf.groupby(['Simple site', 'calendar_year']).median()
 ccdf = pd.concat([reWL, impYrsDf], axis=1)
 
 # Add the percent time flooded variable:
+pfl = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\11968_PercentFlooded_CalendarYearTimeSeries\11968.csv",
+                  encoding="unicode_escape")
+pfltest = pfl[pfl["Station_ID"].str.contains("H") == True]
+pfltest['Simple site'] = [i[:8] for i in pfltest['Station_ID']]
+pfldf = pfltest[['Simple site', 'Year', 'avg_percentflooded (%)']]
+rePFL = pfldf.groupby(['Simple site', 'Year']).median()
+pwccdf = pd.concat([rePFL, ccdf], axis=1)
 
 # add the remote sensing data:
