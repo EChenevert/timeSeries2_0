@@ -50,3 +50,5 @@ rePFL = pfldf.groupby(['Simple site', 'Year']).median()
 pwccdf = pd.concat([rePFL, ccdf], axis=1)
 
 # add the remote sensing data:
+
+# Keep the distances with the
