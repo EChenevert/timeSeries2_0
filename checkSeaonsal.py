@@ -2,8 +2,16 @@ import main
 import pandas as pd
 import numpy as np
 
+
+# This is to get the time series
 dataframes = main.load_data()
 avgSeasons = main.average_byyear_bysite_seasonal(dataframes)
+# This is to get the time average / total site names
+dataframes = main.load_data()
+avgBysite = main.average_bysite(dataframes)
+avgBysite = avgBysite.dropna(subset='Longitude').reset_index()
+avgBysite[['Simple site', 'Latitude', 'Longitude', 'Basins', 'Community']]\
+    .to_csv("D:\\Etienne\\fall2022\CRMS_data\\siteNamesAndCoords10_9.csv")
 
 springWinterTS = avgSeasons[avgSeasons['Season'] == 2]
 summerTS = avgSeasons[avgSeasons['Season'] == 1]
@@ -49,6 +57,26 @@ pfldf = pfltest[['Simple site', 'Year', 'avg_percentflooded (%)']]
 rePFL = pfldf.groupby(['Simple site', 'Year']).median()
 pwccdf = pd.concat([rePFL, ccdf], axis=1)
 
-# add the remote sensing data:
+# add the remote sensing data (YEARLY):
+# NDVI
+ndviTS = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\table_demo_NDVI_CRMS.csv", encoding='unicode_escape')
+ndviTS['Year'] = [i[:4] for i in ndviTS['system:index']]
+newNDVIts = ndviTS.drop('system:index', axis=1)
+dicNDVI = {'Year': [], 'Simple site': [], 'NDVI': []}
 
-# Keep the distances with the
+listSites = list(newNDVIts.columns.values)
+listSites.remove('.geo')
+listSites.remove('imageId')
+listSites.remove('Year')
+for col in listSites:
+    diffdf = newNDVIts[['Year', col]]
+    diffdf['Simple site'] = col
+    dicNDVI['Year'] = dicNDVI['Year'] + list(diffdf['Year'])
+    dicNDVI['Simple site'] = dicNDVI['Simple site'] + list(diffdf['Simple site'])
+    dicNDVI['NDVI'] = dicNDVI['NDVI'] + list(diffdf[col])
+
+dfndvi = pd.DataFrame(dicNDVI)
+dfndvigb = dfndvi.groupby(['Simple site', 'Year']).median()
+
+# TSS
+
