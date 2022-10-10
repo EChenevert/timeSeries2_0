@@ -1,6 +1,5 @@
 import main
 import pandas as pd
-import numpy as np
 
 
 # This is to get the time series
