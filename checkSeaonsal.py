@@ -16,6 +16,7 @@ avgBysite[['Simple site', 'Latitude', 'Longitude', 'Basins', 'Community']]\
 springWinterTS = avgSeasons[avgSeasons['Season'] == 2]
 summerTS = avgSeasons[avgSeasons['Season'] == 1]
 # Condense into just yearly because i only get yearly tide amp measurements easily
+avgSeasons['Year (yyyy)'] = avgSeasons['Year (yyyy)'].astype(str)
 yearsDf = avgSeasons.groupby(['Simple site', 'Year (yyyy)']).median()
 impYrsDf = yearsDf[['Season', 'Average Accretion (mm)', 'Accretion Rate (mm/yr)', 'Staff Gauge (ft)',
                     'Soil Porewater Temperature (°C)', 'Soil Porewater Specific Conductance (uS/cm)',
@@ -45,6 +46,7 @@ wltest['Simple site'] = [i[:8] for i in wltest['Station_ID']]
 # Only take relevant variables and set index to simple site and year for concatenation with other df
 wldf = wltest[['Tide_Amp (ft)', 'calendar_year', 'avg_flooding (ft)', '90%thUpper_flooding (ft)',
                '10%thLower_flooding (ft)', 'std_deviation_avg_flooding (ft)', 'Simple site']]
+wldf['calendar_year'] = wldf['calendar_year'].astype(str)
 reWL = wldf.groupby(['Simple site', 'calendar_year']).median()
 ccdf = pd.concat([reWL, impYrsDf], axis=1)
 
@@ -54,6 +56,7 @@ pfl = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\11968_PercentFlooded_CalendarY
 pfltest = pfl[pfl["Station_ID"].str.contains("H") == True]
 pfltest['Simple site'] = [i[:8] for i in pfltest['Station_ID']]
 pfldf = pfltest[['Simple site', 'Year', 'avg_percentflooded (%)']]
+pfldf['Year'] = pfldf['Year'].astype(str)
 rePFL = pfldf.groupby(['Simple site', 'Year']).median()
 pwccdf = pd.concat([rePFL, ccdf], axis=1)
 
@@ -82,7 +85,7 @@ dfndvigb = dfndvi.groupby(['Simple site', 'Year']).median()
 tssTS = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\table_demo_TSS_CRMS.csv", encoding='unicode_escape')
 tssTS['Year'] = [i[:4] for i in tssTS['system:index']]
 newTSSts = tssTS.drop('system:index', axis=1)
-dicTSS = {'Year': [], 'Simple site': [], 'NDVI': []}
+dicTSS = {'Year': [], 'Simple site': [], 'TSS': []}
 
 tssSites = list(newTSSts.columns.values)
 tssSites.remove('.geo')
@@ -91,9 +94,15 @@ tssSites.remove('Year')
 for col in tssSites:
     diffdf = newTSSts[['Year', col]]
     diffdf['Simple site'] = col
-    dicNDVI['Year'] = dicNDVI['Year'] + list(diffdf['Year'])
-    dicNDVI['Simple site'] = dicNDVI['Simple site'] + list(diffdf['Simple site'])
-    dicNDVI['NDVI'] = dicNDVI['NDVI'] + list(diffdf[col])
+    dicTSS['Year'] = dicTSS['Year'] + list(diffdf['Year'])
+    dicTSS['Simple site'] = dicTSS['Simple site'] + list(diffdf['Simple site'])
+    dicTSS['TSS'] = dicTSS['TSS'] + list(diffdf[col])
 
-dftss = pd.DataFrame(dicNDVI)
-dftssgb = dfndvi.groupby(['Simple site', 'Year']).median()
+dftss = pd.DataFrame(dicTSS)
+dftssgb = dftss.groupby(['Simple site', 'Year']).median()
+
+# Combine the datasets
+rsdf = pd.concat([dftssgb, dfndvigb], join='inner', axis=1)
+alldf = pd.concat([rsdf, pwccdf], join='inner', axis=1)
+alldf.to_csv("D:\\Etienne\\fall2022\\CRMS_data\\timeseries_CRMS.csv")
+
