@@ -115,4 +115,3 @@ dicBasinSite = dict(zip(basinComRef['Simple site'], basinComRef['Basins']))
 alldf['Basins'] = [dicBasinSite[site] for site in alldf['Simple site']]
 
 alldf.to_csv("D:\\Etienne\\fall2022\\CRMS_data\\timeseries_CRMS.csv")
-
