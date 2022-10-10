@@ -103,6 +103,16 @@ dftssgb = dftss.groupby(['Simple site', 'Year']).median()
 
 # Combine the datasets
 rsdf = pd.concat([dftssgb, dfndvigb], join='inner', axis=1)
-alldf = pd.concat([rsdf, pwccdf], join='inner', axis=1)
+alldf = pd.concat([rsdf, pwccdf], join='inner', axis=1).reset_index()
+
+# Attach the correct basin and marsh type to each specific site.
+marshComRef = avgBysite[['Simple site', 'Community']]
+dicMarshSite = dict(zip(marshComRef['Simple site'], marshComRef['Community']))
+alldf['Community'] = [dicMarshSite[site] for site in alldf['Simple site']]
+
+basinComRef = avgBysite[['Simple site', 'Basins']]
+dicBasinSite = dict(zip(basinComRef['Simple site'], basinComRef['Basins']))
+alldf['Basins'] = [dicBasinSite[site] for site in alldf['Simple site']]
+
 alldf.to_csv("D:\\Etienne\\fall2022\\CRMS_data\\timeseries_CRMS.csv")
 
