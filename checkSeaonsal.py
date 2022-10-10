@@ -59,7 +59,7 @@ pwccdf = pd.concat([rePFL, ccdf], axis=1)
 
 # add the remote sensing data (YEARLY):
 # NDVI
-ndviTS = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\table_demo_NDVI_CRMS.csv", encoding='unicode_escape')
+ndviTS = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\table_demo_NDVI_CRMS3.csv", encoding='unicode_escape')
 ndviTS['Year'] = [i[:4] for i in ndviTS['system:index']]
 newNDVIts = ndviTS.drop('system:index', axis=1)
 dicNDVI = {'Year': [], 'Simple site': [], 'NDVI': []}
@@ -79,4 +79,21 @@ dfndvi = pd.DataFrame(dicNDVI)
 dfndvigb = dfndvi.groupby(['Simple site', 'Year']).median()
 
 # TSS
+tssTS = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\table_demo_TSS_CRMS.csv", encoding='unicode_escape')
+tssTS['Year'] = [i[:4] for i in tssTS['system:index']]
+newTSSts = tssTS.drop('system:index', axis=1)
+dicTSS = {'Year': [], 'Simple site': [], 'NDVI': []}
 
+tssSites = list(newTSSts.columns.values)
+tssSites.remove('.geo')
+tssSites.remove('imageId')
+tssSites.remove('Year')
+for col in tssSites:
+    diffdf = newTSSts[['Year', col]]
+    diffdf['Simple site'] = col
+    dicNDVI['Year'] = dicNDVI['Year'] + list(diffdf['Year'])
+    dicNDVI['Simple site'] = dicNDVI['Simple site'] + list(diffdf['Simple site'])
+    dicNDVI['NDVI'] = dicNDVI['NDVI'] + list(diffdf[col])
+
+dftss = pd.DataFrame(dicNDVI)
+dftssgb = dfndvi.groupby(['Simple site', 'Year']).median()
