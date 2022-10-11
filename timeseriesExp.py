@@ -111,8 +111,8 @@ for col in dfimp.columns:
     # plt.title(col)
     # plt.show()
 
-
-
+### Do a lil XGBoost on the whole dataset...
+#...... DO THESEEEEE >>>>>>>>>>>>>>>
 
 # V
 
