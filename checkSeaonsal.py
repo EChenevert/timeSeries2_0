@@ -113,4 +113,22 @@ basinComRef = avgBysite[['Simple site', 'Basins']]
 dicBasinSite = dict(zip(basinComRef['Simple site'], basinComRef['Basins']))
 alldf['Basins'] = [dicBasinSite[site] for site in alldf['Simple site']]
 
+# alldf.to_csv("D:\\Etienne\\fall2022\\CRMS_data\\timeseries_CRMS.csv")
+
+## Attach the stationary distance variables and stationary water-area-perimeter variables
+allsummed = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\allSummedUp5km.csv", encoding='unicode_escape')\
+    .set_index('Field1')
+riverDist = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv", encoding='unicode_escape')[[
+    'Field1', 'distance_to_river_m'
+]].set_index('Field1')
+sumDist = pd.concat([allsummed, riverDist], axis=1)
+sumDist['LengthScale (perimeter/area)'] = sumDist['Shape_Length']/sumDist['Shape_Area']
+sumDist = sumDist.reset_index()
+# stitch the terms to the timeseries
+alldf = alldf.reset_index()
+for col in sumDist.columns[1:]:
+    dicDists = dict(zip(sumDist['Field1'], sumDist[col]))
+    alldf[col] = [dicDists[site] for site in alldf['Simple site']]
+
 alldf.to_csv("D:\\Etienne\\fall2022\\CRMS_data\\timeseries_CRMS.csv")
+
