@@ -205,6 +205,6 @@ for marsh in list(set(dfout['Community'])):
     scorestrain = cross_val_score(bestxgb, X_train, y_train.values.ravel(), scoring='r2',
                                   cv=rcv, n_jobs=-1)
     print('### BEST XBG WHOLE DATASET ###')
-    print(" TRAIN: mean RCV, and median RCV r2: ", np.mean(scorestrain), np.median(scorestrain))
+    print("TRAIN: mean RCV, and median RCV r2: ", np.mean(scorestrain), np.median(scorestrain))
 
 
