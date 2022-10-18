@@ -70,5 +70,6 @@ plt.show()
 # To me this plot seems to say that test-train splits should not be used for model evaluation because I
 # seem to have a lot of variability in the MSE
 
-# NEXT: To either extract the predicted values (should be self explanatory from the returnMSE function)
+# NEXT: To either extract the predicted values (should be self explanatory from the returnMSE function) or to
+# collect better data in order to put in this. An iterative CV evaluation should also be created
 
