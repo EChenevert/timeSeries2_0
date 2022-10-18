@@ -16,7 +16,7 @@ def outlierrm(df, thres=3):
     length = len(df.columns.values)
     for col in df.columns.values:
         df[col + "_z"] = stats.zscore(df[col])
-    for col in df.columns.values[length:]:
+    for col in df.columns.values[length-1:]:
         df = df[np.abs(df[col]) < thres]
     df = df.drop(df.columns.values[length:], axis=1)
     if switch:

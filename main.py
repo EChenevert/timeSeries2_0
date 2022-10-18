@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import csv
 
 
 # Functions used to load data
@@ -57,6 +56,12 @@ def add_accretionRate(accdf):
     accdf['Accretion Rate (mm/yr)'] = accdf['Average Accretion (mm)'] / accdf['Delta Time (decimal_years)']
 
     return accdf
+
+
+def sum_accretion(accdf):
+    """Will sum accretion rates over the time interval represented by the data ''
+    MAYBE THIS CAN JUS BE BETTER DONE BY A GROUPBY FUNCTION"""
+
 
 
 def convert_str(string):
