@@ -16,36 +16,39 @@ def getB(gamma, mN, t, phi):
     return (N - gamma)/scalar
 
 
-#
-# def iterative_prog_wPrior(phi, t, prior_mean, prior_sigma):
-#     """
-#     I believe this is the hyperparameter tuning using the train set
-#     :param B: random initial beta hyperparameter
-#     :param a: random initial alpha hyperparameter
-#     :param phi: training data matrix
-#     :param t: training target vector
-#     :return: ideal beta, alpha, and effective lambda
-#     """
-#     B = np.random.uniform(0, 10)
-#     a = np.random.uniform(0, 10)
-#     Blist = [B]
-#     alist = [a]
-#     itr = 0
-#     switch = 'off'
-#     while switch == 'off':
-#         I = np.identity(len(phi[0, :]))  # make identity matrix the length of the input data's columns
-#         SN = np.linalg.inv(a*I + B*(phi.T@phi))  # the dimensions of the covariance matrix should be the same # as the data's columns.Right?
-#         mN = B*(SN@(phi.T@t))
-#         eigs_logLHessian = np.linalg.eigvals(B*(phi.T@phi))  # derived by taking logL of Hessian M to max evidence
-#         gamma = getgamma(eigs_logLHessian, a)
-#         B = getB(gamma, mN, t, phi)
-#         Blist.append(B)
-#         a = gamma/(mN.T@mN)
-#         alist.append(a)
-#         itr += 1
-#         if abs(Blist[itr] - Blist[itr-1]) < 0.01 and abs(alist[itr] - alist[itr-1]) < 0.01:  # DAMN this seems crazy
-#             switch = 'on'
-#     return B, a, a/B, itr
+def iterative_prog_wPrior(phi, t, m0):
+    """
+    I believe this is the hyperparameter tuning using the train set
+    :param B: random initial beta hyperparameter
+    :param a: random initial alpha hyperparameter
+    :param phi: training data matrix
+    :param t: training target vector
+    :return: ideal beta, alpha, and effective lambda
+    """
+    B = np.random.uniform(0, 10)
+    a = np.random.uniform(0, 10)
+    Blist = [B]
+    alist = [a]
+    itr = 0
+    switch = 'off'
+    while switch == 'off':
+        I = np.identity(len(phi[0, :]))  # make identity matrix the length of the input data's columns
+        SN = np.linalg.inv(a*I + B*(phi.T@phi))  # stays the same --> using infinitely broad prior
+        aI = a*I
+        aIm0 = aI@m0
+        Bphit = np.expand_dims(B*(phi.T@t), axis=1)
+        aIplusBphit = np.add(aIm0, Bphit)
+        mN = SN@aIplusBphit
+        eigs_logLHessian = np.linalg.eigvals(B*(phi.T@phi))  # derived by taking logL of Hessian M to max evidence
+        gamma = getgamma(eigs_logLHessian, a)
+        B = getB(gamma, mN, t, phi)
+        Blist.append(B)
+        a = gamma/(mN.T@mN)
+        alist.append(a)
+        itr += 1
+        if abs(Blist[itr] - Blist[itr-1]) < 0.01 and abs(alist[itr] - alist[itr-1]) < 0.01:  # DAMN this seems crazy
+            switch = 'on'
+    return B, a, a/B, itr
 
 
 
