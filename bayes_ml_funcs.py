@@ -70,7 +70,6 @@ def calculate_log_evidence(phi, a, B, t):
     mN = B*(SN@(phi.T@t))
     M = len(mN)
     N = len(phi)
-    # logt = []
     term_ls = []
 
     # I changed this chunk a bit
