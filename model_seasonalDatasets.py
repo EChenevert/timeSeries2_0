@@ -76,7 +76,7 @@ summerDF = summerDF.drop([
     'Delta time (days)', 'Delta Time (decimal_years)', 'Soil Moisture Content (%)', 'Bulk Density (g/cm3)',
     'Organic Matter (%)', 'Wet Volume (cm3)', 'Organic Density (g/cm3)', 'Measurement Depth (ft)',
     'Soil Porewater Temperature (°C)', 'Direction (Collar Number)', 'Direction (Compass Degrees)',
-    'Pin Number', 'Observed Pin Height (mm)', 'Verified Pin Height (mm)'
+    'Pin Number', 'Observed Pin Height (mm)', 'Verified Pin Height (mm)', 'Plot Size (m2)'
 ], axis=1)
 
 dic = {'summer': summerDF, 'winter': winterDF}
