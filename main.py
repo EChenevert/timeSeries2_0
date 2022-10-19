@@ -58,6 +58,33 @@ def add_accretionRate(accdf):
     return accdf
 
 
+def add_secRate(accdf):
+    # accdf['Verified Pin Height (mm)'] = (accdf['Accretion Measurement 1 (mm)'] + accdf['Accretion Measurement 2 (mm)'] +
+    #                                    accdf['Accretion Measurement 3 (mm)'] +
+    #                                    accdf['Accretion Measurement 4 (mm)']) / 4
+
+    accdf['Sample Date (mm/dd/yyyy)'] = pd.to_datetime(accdf['Sample Date (mm/dd/yyyy)'],
+                                                       format='%m/%d/%Y')
+
+    accdf['Establishment Date (mm/dd/yyyy)'] = pd.to_datetime(accdf['Establishment Date (mm/dd/yyyy)'],
+                                                              format='%m/%d/%Y')
+
+    accdf['Delta time (days)'] = accdf['Sample Date (mm/dd/yyyy)'] - \
+                                 accdf['Establishment Date (mm/dd/yyyy)']
+
+    accdf['Delta time (days)'] = accdf['Delta time (days)'].dt.days
+    accdf['Delta Time (decimal_years)'] = accdf['Delta time (days)'] / 365
+    accdf['surface difference'] = accdf['Verified Pin Height (mm)']
+    accdf['surface difference'][0] = 0.0
+    # accdf['surface difference'] = [accdf['surface difference'][i] - accdf['surface difference'][i-1] for i in
+    #                                range(1, len(accdf['surface difference']))]
+    for i in range(1, len(accdf['surface difference'])):
+        accdf['surface difference'][i] = accdf['surface difference'][i] - accdf['surface difference'][i-1]
+    accdf['SEC Rate (mm/yr)'] = accdf['surface difference'] / accdf['Delta Time (decimal_years)']
+
+    return accdf
+
+
 def sum_accretion(accdf):
     """Will sum accretion rates over the time interval represented by the data ''
     MAYBE THIS CAN JUS BE BETTER DONE BY A GROUPBY FUNCTION"""
@@ -127,8 +154,10 @@ def load_data():
         dfs[d]['Basins'] = np.arange(len(dfs[d]['Simple site']))  # this is for appending a basins variable
 
         if 'Accretion Measurement 1 (mm)' in dfs[d].columns:
-            # dfs[d] = add_avgAccretion(dfs[d])
             dfs[d] = add_accretionRate(dfs[d])
+        if 'Verified Pin Height (mm)' in dfs[d].columns:
+            dfs[d] = add_secRate(dfs[d])
+
         Calcasieu_Sabine = convert_str(
             'CRMS0684, CRMS2189, CRMS0669, CRMS1838, CRMS0665, CRMS2166, CRMS0663, CRMS0662, CRMS2156, CRMS2154, CRMS0697, CRMS0660, CRMS0683, CRMS0661, CRMS2219, CRMS0658, CRMS0693, CRMS0682, CRMS1205, CRMS0651, CRMS0694, CRMS0677, CRMS0680, CRMS1858, CRMS0638, CRMS2334, CRMS0641, CRMS0651, CRMS0635, CRMS0639, CRMS0642, CRMS0647, CRMS6302, CRMS6301, CRMS0685, CRMS0672, CRMS0655, CRMS0687, CRMS0656, CRMS0644, CRMS1743, CRMS1738, CRMS0645, CRMS2418, CRMS0648, CRMS0650, CRMS0691')
         Mermentau = convert_str(
