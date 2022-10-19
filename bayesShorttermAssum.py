@@ -24,13 +24,37 @@ geefrom2020 = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\bayes2year\CRMS_GEE90p
     .groupby('Simple_sit').median()
 distRiver = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv",
                         encoding="unicode escape")[['Field1', 'distance_to_river_m']].groupby('Field1').median()
+SEC = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\bayes2year\12017_SurfaceElevation_ChangeRate\12017.csv",
+                  encoding="unicode escape")
+SEC['Simple site'] = [i[:8] for i in SEC['Station_ID']]
+SEC = SEC.groupby('Simple site').median()
 # Concatenate
-df = pd.concat([lasRates, distRiver, geefrom2020, marshElev, veg, wl, perc], axis=1, join='inner')
+df = pd.concat([lasRates, distRiver, geefrom2020, marshElev, veg, wl, perc, SEC], axis=1, join='inner')
+
 # Make the subsidence and rslr variables: using the
-# df['Shallow Subsidence Rate (mm/yr)'] = df['Accretion Rate (mm/yr)'] -
+df['Shallow Subsidence Rate (mm/yr)'] = df['Accretion Rate (mm/yr)'] - df['Surface Elevation Change Rate (cm/y)']*10
+df['SEC Rate (mm/yr)'] = df['Surface Elevation Change Rate (cm/y)']*10
+df['SLR (mm/yr)'] = 2.0  # from jankowski
+df['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * df['Latitude']) - 114.26)*-1
+df['RSLR (mm/yr)'] = df['Shallow Subsidence Rate (mm/yr)'] + df['Deep Subsidence Rate (mm/yr)'] + df['SLR (mm/yr)']
+
+# Clean dataset
+df = df.dropna(subset='Accretion Rate (mm/yr)')
+df = df.dropna(thresh=df.shape[0]*0.9, how='all', axis=1)
+
+dfi = df[[
+    'Shallow Subsidence Rate (mm/yr)', 'SEC Rate (mm/yr)', 'SLR (mm/yr)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)',
+    'Accretion Rate (mm/yr)', 'avg_flooding (ft)', '90%thUpper_flooding (ft)', '10%thLower_flooding (ft)',
+    'std_deviation_avg_flooding (ft)', 'avg_percentflooded (%)', 'distance_to_river_m', 'NDVI', 'windspeed',
+    'Tide_Amp (ft)'
+]]
+
+
 import matplotlib.pyplot as plt
 plt.figure()
-plt.scatter(df['Accretion Rate (mm/yr)'], df['SEC Rate (mm/yr)'])
+plt.scatter(dfi['Accretion Rate (mm/yr)'], dfi['SEC Rate (mm/yr)'])
 plt.show()
+
+#### NEXT IS TO CREATE THAT BAYSIAN LINEAR REGRESSION FROM THE BAYES FUNCS FILE!!!!!!!!!!!!!!
 
 
