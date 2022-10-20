@@ -23,6 +23,11 @@ df = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\bayes2year\CRMS_dfi.csv", encod
     .set_index('Unnamed: 0')
 outcome = 'Accretion Rate (mm/yr)'
 df_vars = df.columns.values
+
+
+# Normality test
+
+
 # Normalize dataset between 0 and 1
 x_scaler = MinMaxScaler()
 phi = x_scaler.fit_transform(df.drop(outcome, axis=1))
