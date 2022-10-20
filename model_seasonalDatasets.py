@@ -101,14 +101,14 @@ for key in dic:
         'gamma': [0, 0.2, 0.4, 0.6, 0.8, 1]
     }
     # 624,000 grid space
-    rs_model = RandomizedSearchCV(xgbmodel, param_distributions=params, n_iter=100, scoring='r2', n_jobs=-1, cv=5,
+    rs_model = RandomizedSearchCV(xgbmodel, param_distributions=params, n_iter=100, scoring='neg_mean_squared_error', n_jobs=-1, cv=5,
                                   verbose=1)
     rs_model.fit(X, y)
     bestxgb = rs_model.best_estimator_
 
     # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
-    scores = cross_val_score(bestxgb, X, y.values.ravel(), scoring='r2',
+    scores = cross_val_score(bestxgb, X, y.values.ravel(), scoring='neg_mean_squared_error',
                              cv=rcv, n_jobs=-1)
     rcvresults = scores
     print('### BEST XBG WHOLE DATASET ###')

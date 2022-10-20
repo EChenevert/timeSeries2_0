@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import main
+from scipy import stats
+
 
 data = main.load_data()
 yearly = main.average_byyear_bysite_seasonal(data)
@@ -42,10 +44,35 @@ df['RSLR (mm/yr)'] = df['Shallow Subsidence Rate (mm/yr)'] + df['Deep Subsidence
 df = df.dropna(subset='Accretion Rate (mm/yr)')
 df = df.dropna(thresh=df.shape[0]*0.9, how='all', axis=1)
 
+
+def outlierrm(df, thres=3):
+    """Dont put in long lats in here! Need Year and Site name lol"""
+    df = df.dropna()
+    switch = False
+    if 'Basins' in df.columns.values or 'Community' in df.columns.values:
+        print('True')
+        switch = True
+        holdstrings = df[['Basins', 'Community']]
+        df = df.drop(['Basins', 'Community'], axis=1)
+    df = df.apply(pd.to_numeric)
+    length = len(df.columns.values)
+    for col in df.columns.values:
+        df[col + "_z"] = stats.zscore(df[col])
+    for col in df.columns.values[length:]:
+        df = df[np.abs(df[col]) < thres]
+    df = df.drop(df.columns.values[length:], axis=1)
+    if switch:
+        df = pd.concat([df, holdstrings], join='inner', axis=1)
+    return df
+
+
+
 dfi = df[[
     'RSLR (mm/yr)', 'Accretion Rate (mm/yr)', 'avg_flooding (ft)', '90%thUpper_flooding (ft)',
     '10%thLower_flooding (ft)', 'std_deviation_avg_flooding (ft)', 'avg_percentflooded (%)', 'distance_to_river_m',
     'NDVI', 'windspeed', 'Tide_Amp (ft)'
 ]]
+
+dfi = outlierrm(dfi, thres=3)
 
 dfi.to_csv(r"D:\Etienne\fall2022\CRMS_data\bayes2year\CRMS_dfi.csv")
