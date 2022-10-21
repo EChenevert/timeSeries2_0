@@ -50,36 +50,46 @@ from sklearn.model_selection import train_test_split
 
 MSE_map_ls = []
 MSE_ml_ls = []
+MSE_map_winfo = []
 trainSize = []
 trainFracArr = np.linspace(0.1, 0.9, 40)
 for frac in trainFracArr:
     hold_mlMSE = []
     hold_mapMSE = []
+    hold_mapMSE_winfo = []
     for i in range(100):
         # Train test split
         X_train, X_test, y_train, y_test = train_test_split(phi[:, 1:], t, train_size=frac)  # 0 cuz 0 corresponds to the RSLR var
-        B, a, eff_lambda, itr = bml.iterative_prog_wPrior(X_train, y_train,
+        B, a, eff_lambda_winfo, itr = bml.iterative_prog_wPrior(X_train, y_train,
                                                           phi[:, 0])   # 0 cuz 0 corresponds to the RSLR var
-        # B, a, eff_lambda, itr = bml.iterative_prog(X_train, y_train)  # std of 0.5 cuz i normalize variables between 0 and 1
+        B, a, eff_lambda, itr = bml.iterative_prog(X_train, y_train)  # std of 0.5 cuz i normalize variables between 0 and 1
 
-        var_weights_map = bml.regLn(eff_lambda, X_train, y_train)
+        var_weights_map_winfo = bml.leastSquares(eff_lambda_winfo, X_train, y_train)
+        map_MSE_winfo = bml.returnMSE(X_test, var_weights_map_winfo, y_test)
+        hold_mapMSE_winfo.append(map_MSE_winfo)
+
+        var_weights_map = bml.leastSquares(eff_lambda, X_train, y_train)
         map_MSE = bml.returnMSE(X_test, var_weights_map, y_test)
         hold_mapMSE.append(map_MSE)
-        var_weights_ml = bml.regLn(0, X_train, y_train)  # recall that ml is when lambda is 0
+
+        var_weights_ml = bml.leastSquares(0, X_train, y_train)  # recall that ml is when lambda is 0
         ml_MSE = bml.returnMSE(X_test, var_weights_ml, y_test)
         hold_mlMSE .append(ml_MSE)
     # Append train size for plotting
     trainSize.append(frac)
     MSE_ml_ls.append(np.mean(hold_mlMSE))
     MSE_map_ls.append(np.mean(hold_mapMSE))
+    MSE_map_winfo.append(np.mean(hold_mapMSE_winfo))
 
 plt.figure()
-plt.plot(trainSize, MSE_map_ls, label='map MSE')
-plt.plot(trainSize, MSE_ml_ls, label='ml MSE')
+plt.plot(trainSize, MSE_map_ls, label='MAP')
+plt.plot(trainSize, MSE_ml_ls, label='MLE')
+plt.plot(trainSize, MSE_map_winfo, label='informed MAP')
+# plt.ylim(0, 500)
 plt.title('MSE versus Train Size')
 plt.ylabel('MSE')
 plt.xlabel('Train Size')
-plt.ylim(0, 500)
+# plt.ylim(0, 500)
 plt.legend()
 plt.show()
 # To me this plot seems to say that test-train splits should not be used for model evaluation because I

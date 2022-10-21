@@ -33,6 +33,8 @@ def iterative_prog_wPrior(phi, t, prior_vect):
     switch = 'off'
     while switch == 'off':
         I = np.identity(len(phi[0, :]))  # make identity matrix the length of the input data's columns
+        std = np.std(prior_vect)
+        I = std*I
         m0 = np.mean(prior_vect)
 
         SN = np.linalg.inv(a*I + B*(phi.T@phi))  # stays the same --> using infinitely broad prior
@@ -88,14 +90,14 @@ def iterative_prog(phi, t):
         a = gamma/(mN.T@mN)
         alist.append(a)
         itr += 1
-        if abs(Blist[itr] - Blist[itr-1]) < 0.01 and abs(alist[itr] - alist[itr-1]) < 0.01:  # DAMN this seems crazy
+        if abs(Blist[itr] - Blist[itr-1]) < 0.000001 and abs(alist[itr] - alist[itr-1]) < 0.000001:  # DAMN this seems crazy
             switch = 'on'
         if itr > 1000:
             switch = 'on'
     return B, a, a/B, itr
 
 
-def regLn(lam, phi, t):
+def leastSquares(lam, phi, t):
     I = np.identity(len(phi[0, :]))  # dim of I are equal to the # of features in phi
     whatdis = np.linalg.inv(lam*I + phi.T@phi)
     w = whatdis@phi.T@t
@@ -114,6 +116,16 @@ def returnMSE(phi, w, t):
         tosum.append((phi[i, :]@w - t[i])**2)
     summed = np.sum(tosum)
     return summed/N
+
+
+def returnMAE(phi, w, t):
+    N = len(phi)
+    tosum = []
+    for i in range(len(t)):
+        tosum.append(phi[i, :]@w - t[i])
+    summed = np.sum(tosum)
+    return abs(summed/N)
+
 
 def calculate_log_evidence(phi, a, B, t):
     """  """
