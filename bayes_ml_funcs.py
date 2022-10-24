@@ -126,7 +126,6 @@ def returnMAE(phi, w, t):
     summed = np.sum(tosum)
     return abs(summed/N)
 
-
 def calculate_log_evidence(phi, a, B, t):
     """  """
     # t = np.expand_dims(t, axis=1)
