@@ -90,7 +90,7 @@ def iterative_prog(phi, t):
         a = gamma/(mN.T@mN)
         alist.append(a)
         itr += 1
-        if abs(Blist[itr] - Blist[itr-1]) < 0.0000000001 and abs(alist[itr] - alist[itr-1]) < 0.0000000001:  # DAMN this seems crazy
+        if abs(Blist[itr] - Blist[itr-1]) < 0.000001 and abs(alist[itr] - alist[itr-1]) < 0.000001:  # DAMN this seems crazy
             switch = 'on'
         if itr > 1000:
             switch = 'on'
@@ -143,7 +143,5 @@ def calculate_log_evidence(phi, a, B, t):
     A = a*np.identity(len(phi[0, :])) + B*(phi.T@phi)
     detA = np.linalg.det(A)
     return M/2 * np.log(a) + N/2 * np.log(B) - EmNi - 1/2 * np.log(detA) - N/2 * np.log(2*np.pi)
-
-
 
 
