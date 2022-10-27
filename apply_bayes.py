@@ -44,7 +44,13 @@ trainSize = []
 trainFracArr = np.linspace(0.1, 0.9, 40)
 for frac in trainFracArr:
     # Train test split
-    X_train, X_test, y_train, y_test = train_test_split(phi, t, train_size=frac)
+    # X_train, X_test, y_train, y_test = train_test_split(phi, t, train_size=frac)
+
+    X_train = phi[:int(len(phi)*frac), :]
+    X_test = phi[int(len(phi)*frac):, :]
+    y_train = t[:int(len(phi)*frac)]
+    y_test = t[:int(len(phi) * frac)]
+
     print(len(X_train))
     B, a, eff_lambda, itr = bml.iterative_prog_wPrior(X_train, y_train,
                                                       np.random.normal(12, 1, size=(len(X_train[0, :]), 1)))  # std of 0.5 cuz i normalize variables between 0 and 1

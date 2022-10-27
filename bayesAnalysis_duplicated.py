@@ -28,6 +28,7 @@ df_vars.remove('RSLR (mm/yr)')
 phi = phi[:, 1:]
 
 # Shuffle the dataset to avoid training in only certain spatial areas
+np.random.seed(42)
 np.random.shuffle(phi)
 
 import seaborn as sns
@@ -54,9 +55,13 @@ for frac in trainFracArr:
     hold_mapMSE = []
     hold_mapMSE_winfo = []
     # Train test split
-    X_train, X_test, y_train, y_test = train_test_split(phi, t, train_size=frac)  # 0 cuz 0 corresponds to the RSLR var
-    # B, a, eff_lambda_winfo, itr = bml.iterative_prog_wPrior(X_train, y_train,
-    #                                                   phi[:, 0])   # 0 cuz 0 corresponds to the RSLR var
+    # X_train, X_test, y_train, y_test = train_test_split(phi, t, train_size=frac)  # 0 cuz 0 corresponds to the RSLR var
+
+    X_train = phi[:int(len(phi)*frac) - 1, :]
+    X_test = phi[int(len(phi)*frac):, :]
+    y_train = t[:int(len(phi)*frac) - 1]
+    y_test = t[int(len(phi) * frac):]
+
     B, a, eff_lambda, itr = bml.iterative_prog(X_train, y_train)  # std of 0.5 cuz i normalize variables between 0 and 1
 
     # var_weights_map_winfo = bml.leastSquares(eff_lambda_winfo, X_train, y_train)
