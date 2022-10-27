@@ -82,7 +82,7 @@ summerDF = summerDF.drop([
 dic = {'summer': summerDF, 'winter': winterDF}
 for key in dic:
     print(key)
-    dfout = funcs.outlierrm(dic[key])
+    dfout = funcs.outlierrm(dic[key], 1)
     y = dfout['Accretion Rate (mm/yr)']
     X = dfout.drop(['Accretion Rate (mm/yr)'], axis=1)
     #

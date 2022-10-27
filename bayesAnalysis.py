@@ -56,7 +56,7 @@ MSE_map_ls = []
 MSE_ml_ls = []
 MSE_map_winfo = []
 trainSize = []
-trainFracArr = np.linspace(0.1, 0.9, 40)
+trainFracArr = np.linspace(0.1, 0.9, 20)
 for frac in trainFracArr:
     hold_mlMSE = []
     hold_mapMSE = []
@@ -93,7 +93,7 @@ plt.plot(trainSize, MSE_ml_ls, label='MLE')
 plt.title('MSE versus Train Size')
 plt.ylabel('MSE')
 plt.xlabel('Train Size')
-# plt.ylim(0, 500)
+plt.ylim(0, 500)
 plt.legend()
 plt.show()
 # To me this plot seems to say that test-train splits should not be used for model evaluation because I

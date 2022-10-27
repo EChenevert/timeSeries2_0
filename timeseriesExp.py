@@ -11,7 +11,7 @@ df = pd.read_csv(r"D:\\Etienne\\fall2022\\CRMS_data\\timeseries_CRMS.csv", encod
 df = df.drop(['Unnamed: 0', 'Season', 'Staff Gauge (ft)'], axis=1)  # drop uninformative columns
 df = df.dropna(subset='Accretion Rate (mm/yr)')
 
-def outlierrm(df, thres=3):
+def outlierrm(df, thres=1):
     """Dont put in long lats in here! Need Year and Site name lol"""
     df = df.dropna().set_index(['Simple site', 'level_1'])
     switch = False
