@@ -23,6 +23,10 @@ df = df.drop(outcome, axis=1)
 df_vars = list(df.columns.values)
 
 phi = np.asarray(df)
+# Normalize dataset between 0 and 1
+# x_scaler = MinMaxScaler()
+# phi = x_scaler.fit_transform(df)
+
 RSLR = phi[:, 0]
 df_vars.remove('RSLR (mm/yr)')
 phi = phi[:, 1:]
@@ -93,6 +97,15 @@ plt.xlabel('Train Size')
 plt.ylim(0, 500)
 plt.legend()
 plt.show()
+
+# Find the index of the lowest MSE for ML and MAP
+idxMAP = MSE_map_ls.index(min(MSE_map_ls))
+best_map_weights = MAP_weights[idxMAP]
+idxML = MSE_ml_ls.index(min(MSE_ml_ls))
+best_ml_weights = ML_weights[idxML]
+print('Best training Fraction (MAP): ', trainSize[idxMAP], 'MSE: ', MSE_map_ls[idxMAP])
+print('Best training Fraction (ML): ', trainSize[idxML], 'MSE: ', MSE_ml_ls[idxML])
+
 # To me this plot seems to say that test-train splits should not be used for model evaluation because I
 # seem to have a lot of variability in the MSE
 

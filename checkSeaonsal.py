@@ -25,15 +25,14 @@ impYrsDf = yearsDf[['Season', 'Average Accretion (mm)', 'Accretion Rate (mm/yr)'
 cleanSW = springWinterTS.dropna(thresh=springWinterTS.shape[0]*0.5, how='all', axis=1)
 cleanS = summerTS.dropna(thresh=summerTS.shape[0]*0.5, how='all', axis=1)
 
-# # Only get the important data
-# impSW = cleanSW[['Simple site', 'Year (yyyy)', 'Season', 'Average Accretion (mm)', 'Accretion Rate (mm/yr)', 'Basins',
-#                  'Staff Gauge (ft)', 'Soil Porewater Temperature (°C)', 'Soil Porewater Specific Conductance (uS/cm)',
-#                  'Soil Porewater Salinity (ppt)', 'Average Height Dominant (cm)', 'Average Height Herb (cm)',
-#                  'Community']]
-# impS = cleanS[['Simple site', 'Year (yyyy)', 'Season', 'Average Accretion (mm)', 'Accretion Rate (mm/yr)', 'Basins',
-#                'Staff Gauge (ft)', 'Soil Porewater Temperature (°C)', 'Soil Porewater Specific Conductance (uS/cm)',
-#                'Soil Porewater Salinity (ppt)', 'Average Height Dominant (cm)', 'Average Height Herb (cm)',
-#                'Community']]
+# Only get the important data
+impSW = cleanSW[['Simple site', 'Year (yyyy)', 'Season', 'Average Accretion (mm)', 'Accretion Rate (mm/yr)', 'Basins',
+                 'Staff Gauge (ft)', 'Soil Porewater Temperature (°C)', 'Soil Porewater Specific Conductance (uS/cm)',
+                 'Soil Porewater Salinity (ppt)']]
+impS = cleanS[['Simple site', 'Year (yyyy)', 'Season', 'Average Accretion (mm)', 'Accretion Rate (mm/yr)', 'Basins',
+               'Staff Gauge (ft)', 'Soil Porewater Temperature (°C)', 'Soil Porewater Specific Conductance (uS/cm)',
+               'Soil Porewater Salinity (ppt)', 'Average Height Dominant (cm)', 'Average Height Herb (cm)',
+               'Community']]
 
 # Expand on the site and year average dataset
 wl = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\11966_WaterLevelRange_CalendarYearTimeSeriesAll\11966.csv",

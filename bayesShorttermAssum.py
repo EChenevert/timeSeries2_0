@@ -73,6 +73,6 @@ dfi = df[[
     'NDVI', 'windspeed', 'Tide_Amp (ft)'
 ]]
 
-dfi = outlierrm(dfi, thres=1.3)
+dfi = outlierrm(dfi, thres=2)
 
 dfi.to_csv(r"D:\Etienne\fall2022\CRMS_data\bayes2year\CRMS_dfi.csv")
