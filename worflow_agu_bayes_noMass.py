@@ -74,7 +74,7 @@ vertical = 'Accretion Rate (mm/yr)'
 if vertical == 'Accretion Rate (mm/yr)':
     udf = udf.drop('Acc_rate_fullterm (cm/y)', axis=1)
     # Make sure multiplier of mass acc is in the right units
-    udf['Average_Ac_cm_yr'] = udf['Accretion Rate (mm/yr)'] / 10  # mm to cm conversion
+    # udf['Average_Ac_cm_yr'] = udf['Accretion Rate (mm/yr)'] / 10  # mm to cm conversion
     # Make sure subsidence and RSLR are in correct units
     udf['Shallow Subsidence Rate (mm/yr)'] = udf[vertical] - udf['Surface Elevation Change Rate (cm/y)'] * 10
     udf['Shallow Subsidence Rate (mm/yr)'] = [0 if val < 0 else val for val in udf['Shallow Subsidence Rate (mm/yr)']]
@@ -91,7 +91,7 @@ if vertical == 'Accretion Rate (mm/yr)':
 elif vertical == 'Acc_rate_fullterm (cm/y)':
     udf = udf.drop('Accretion Rate (mm/yr)', axis=1)
     #  Make sure multiplier of mass acc is in the right units
-    udf['Average_Ac_cm_yr'] = udf[vertical]
+    # udf['Average_Ac_cm_yr'] = udf[vertical]
     # Make sure subsidence and RSLR are in correct units
     udf['Shallow Subsidence Rate (mm/yr)'] = (udf[vertical] - udf['Surface Elevation Change Rate (cm/y)'])*10
     udf['SEC Rate (cm/yr)'] = udf['Surface Elevation Change Rate (cm/y)']
@@ -106,23 +106,8 @@ elif vertical == 'Acc_rate_fullterm (cm/y)':
 else:
     print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 
-
-A = 10000  # This is the area of the study, in our case it is per site, so lets say the area is 1 m2 in cm
-udf['Total Mass Accumulation (g/yr)'] = (udf['Bulk Density (g/cm3)'] * udf['Average_Ac_cm_yr']) * A  # g/cm3 * cm/yr * cm2 = g/yr
-udf['Organic Mass Accumulation (g/yr)'] = (udf['Bulk Density (g/cm3)'] * udf['Average_Ac_cm_yr'] * (udf['Organic Matter (%)']/100)) * A
-udf['Mineral Mass Accumulation (g/yr)'] = udf['Total Mass Accumulation (g/yr)'] - udf['Organic Mass Accumulation (g/yr)']
-# Just drop the terms to be safew
-udf = udf.drop([vertical, 'Average_Ac_cm_yr', 'Total Mass Accumulation (g/yr)'], axis=1)
-
-# ########### Define outcome ########## SWITCH BETWEEN ORGANIC MASS ACC AND MINERLA MASS ACC
-outcome = 'Mineral Mass Accumulation (g/yr)'
-if outcome == 'Mineral Mass Accumulation (g/yr)':
-    udf = udf.drop('Organic Mass Accumulation (g/yr)', axis=1)
-elif outcome == 'Organic Mass Accumulation (g/yr)':
-    udf = udf.drop('Mineral Mass Accumulation (g/yr)', axis=1)
-else:
-    print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-
+####### Define outcome as vertical component
+outcome = vertical
 
 # Try to semi-standardize variables
 des = udf.describe()  # just to identify which variables are way of the scale
@@ -150,7 +135,6 @@ rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mea
 # Now it is feature selection time
 # drop any variables related to the outcome
 rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
-    'Soil Moisture Content (%)', 'Bulk Density (g/cm3)', 'Organic Matter (%)', 'Organic Density (g/cm3)',
     'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)',
     # taking out water level features because they are not super informative
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
@@ -249,6 +233,125 @@ for var in data.columns.values:
 
 
 
+# so it doesn't really work on the whole dataset
+# lets break into groups
+
+gdf = pd.concat([rdf, udf['Community']], axis=1, join='inner')
+
+# split into marsh datasets
+
+brackdf = gdf[gdf['Community'] == 'Brackish']
+saldf = gdf[gdf['Community'] == 'Saline']
+freshdf = gdf[gdf['Community'] == 'Freshwater']
+interdf = gdf[gdf['Community'] == 'Intermediate']
+# Exclude swamp
+marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf}
+
+preddic = {}
+for key in marshdic:
+    print(key)
+    mdf = marshdic[key]  # .drop('Community', axis=1)
+    # It is preshuffled so i do not think ordering will be a problem
+    target = mdf[outcome].reset_index().drop('index', axis=1)
+    predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
+    # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
+    mlr = linear_model.LinearRegression()
+    # l = linear_model.Lasso()
+    feature_selector = ExhaustiveFeatureSelector(mlr,
+                                                 min_features=1,
+                                                 max_features=5,
+                                                 # I should only use 5 features (15 takes waaaaay too long)
+                                                 scoring='r2',  # minimizes variance, at expense of bias
+                                                 # print_progress=True,
+                                                 cv=5)  # 5 fold cross-validation
+
+    efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
+
+    print('Best CV r2 score: %.2f' % efsmlr.best_score_)
+    print('Best subset (indices):', efsmlr.best_idx_)
+    print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+
+    bestfeaturesM = list(efsmlr.best_feature_names_)
+
+    # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
+    #### NOTE: I should do separate tests to determine which split of the data is optimal ######
+    # first split data set into test train
+    from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
+
+    X, y = predictors[bestfeaturesM], target
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, shuffle=True, random_state=1)
+
+    br = linear_model.BayesianRidge(fit_intercept=False, tol=10e-5)
+    br.fit(X_train, y_train)
+    # Lets check those hyperparameters: lambda corresponds to precision over parameters... alpha is precision over posterior
+    print("lambda (I know as alpha): ", br.lambda_)
+    print("alpha (I know as beta): ", br.alpha_)
+    # lets check the estimates of the w weight vector (from ML derived from least squares solution)
+    print("learned weight vector: ", br.coef_)
+    print(X_train.columns.values)
+    # Lets check out the training model score
+    trainscore = br.score(X_train, y_train)
+    print("Training Score is: ", trainscore)
+    # Predictions
+    # So...... the predictions with this are weird.... we can only get a score that corresponds to R^2 it seems
+    # But that seems weird because I have the weights.... can't I just compute the point estimates?
+    #
+    ypred, stdpred = br.predict(X_test,
+                                return_std=True)  # the y_pred is the mean of the pred_dist for that sample, the stdpred is the std for that sample
+
+    # save standard deviations
+    preddic[key] = stdpred
+
+    from sklearn.metrics import r2_score, mean_absolute_error
+
+    mae = mean_absolute_error(y_test, ypred)
+    r2 = r2_score(y_test, ypred)
+    print("Test MAE: ", mae)
+    print("Test R^2: ", r2)
+
+    # Do cross validation on whole dataset: cross val score fits the data each time to the inputted model, leaving some out and testing it against that left out
+    # the splitting above was only for a test train split test (just for fun but below is more accurate)
+    rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
+    scores = cross_val_score(br, X, y.values.ravel(), cv=rcv, scoring='r2')
+    print("Mean & median r2 repeated cross val: ", np.mean(scores), "  ", np.median(scores))
+
+    # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
+    # the coeffiencets themselves are zeros centered
+
+    # # SHAP analysis
+    # import shap
+    #
+    # # add SHAPLEY
+    # data = X_test  # decided to use X_test because I wanted it to be on NEW data that the model was not fit too;
+    #
+    # masker = shap.maskers.Independent(data=data)
+    #
+    # explainer = shap.Explainer(
+    #     br, masker=masker, feature_names=data.columns
+    # )
+    # sv = explainer(data)
+    # shap.summary_plot(sv, features=data, feature_names=data.columns, plot_type='bar')
+    #
+    # # Do dependence plots for these guys
+    # for var in data.columns.values:
+    #     # Dependence plots
+    #     shap.partial_dependence_plot(
+    #         var, br.predict, data, ice=False,
+    #         model_expected_value=True, feature_expected_value=True
+    #     )
+    #     # correposnding shap plots
+    #     shap.plots.scatter(sv[:, var])
 
 
+# plot box plots of prediction std distributions
+import seaborn as sns
+import matplotlib.pyplot as plt
 
+fig, ax = plt.subplots()
+ax.boxplot(preddic.values())
+ax.set_xticklabels(preddic.keys())
+plt.title('Bayesian Uncertainty Plot by Marsh type')
+plt.ylabel('Variance of Prediction Distribution')
+plt.xlabel("Marsh Type")
+plt.show()

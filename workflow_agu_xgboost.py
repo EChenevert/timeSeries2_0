@@ -113,6 +113,7 @@ udf['Organic Mass Accumulation (g/yr)'] = (udf['Bulk Density (g/cm3)'] * udf['Av
 udf['Mineral Mass Accumulation (g/yr)'] = udf['Total Mass Accumulation (g/yr)'] - udf['Organic Mass Accumulation (g/yr)']
 # Just drop the terms to be safew
 udf = udf.drop([vertical, 'Average_Ac_cm_yr', 'Total Mass Accumulation (g/yr)'], axis=1)
+
 # ########### Define outcome ########## SWITCH BETWEEN ORGANIC MASS ACC AND MINERLA MASS ACC
 outcome = 'Organic Mass Accumulation (g/yr)'
 if outcome == 'Mineral Mass Accumulation (g/yr)':
@@ -137,12 +138,70 @@ udf = udf.rename(columns={'tss_med': 'tss_med_mg/l'})
 import funcs
 rdf = funcs.outlierrm(udf, thres=3)
 
+# transformations (basically log transforamtions) --> the log actually kinda regularizes too
+rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
+rdf['log_river_width_mean_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['river_width_mean_km']]
+rdf['log_distance_to_river_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_river_km']]
+# drop the old features
+rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mean_km'], axis=1)
+
 # Now it is feature selection time
 # drop any variables related to the outcome
 rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Soil Moisture Content (%)', 'Bulk Density (g/cm3)', 'Organic Matter (%)', 'Organic Density (g/cm3)',
-    'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)'
+    'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)',
+    # taking out water level features because they are not super informative
+    '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
+    'Staff Gauge (ft)',
+    'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
+    'log_river_width_mean_km'  # i just dont like this variable because it has a sucky distribution
 ], axis=1)
 
+
+# Time to build the XGBoost model! no feature selection needed!
+from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, RandomizedSearchCV
+import xgboost as xgb
+
+target = rdf[outcome].reset_index().drop('index', axis=1)
+predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
+
+X_train, X_test, y_train, y_test = train_test_split(predictors, target, test_size=0.5, shuffle=True, random_state=1)
+
+xgbmodel = xgb.XGBRegressor()
+params = {
+    'learning_rate': [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40],
+    'min_child_weight': [1, 3, 5, 7, 9, 11],
+    'colsample_bytree': [0.3, 0.4, 0.5, 0.7],
+    'max_depth': [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100],
+    'n_estimators': [25, 50, 100, 400, 500, 600, 700, 800, 900, 1000],
+    'reg_lambda': [0, 0.2, 0.4, 0.6, 0.8, 1],
+    # 'sunsample': [0.2, 0.4, 0.6, 0.8, 1],
+    'gamma': [0, 0.2, 0.4, 0.6, 0.8, 1]
+}
+# 624,000 grid space
+rs_model = RandomizedSearchCV(xgbmodel, param_distributions=params, n_iter=100, scoring='r2', n_jobs=-1, cv=5,
+                              verbose=1)
+rs_model.fit(X_train, y_train)  # even tho for cross_val_score no splitting needs to be done, I need to plit to make unbiased model wrt to hyperparams
+bestxgb = rs_model.best_estimator_
+
+# Now use the selected features to create a model from the train data to test on the test data with repeated cv
+# REMEBER cross val score trains the model a new each time
+rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
+scores = cross_val_score(bestxgb, X_test, y_test.values.ravel(), scoring='r2',
+                         cv=rcv, n_jobs=-1)
+rcvresults = scores
+print('### BEST XBG WHOLE DATASET ###')
+print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
+
+# SHAP analysis
+import shap
+# add SHAPLEY
+bestmodel = bestxgb
+data = X_test
+shap_values = shap.TreeExplainer(bestmodel).shap_values(data)
+explainer = shap.Explainer(bestmodel)
+shap_values = explainer(data)
+# summarize the effects of all the features
+shap.summary_plot(shap_values, features=data, feature_names=data.columns)
 
 
