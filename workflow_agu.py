@@ -1,3 +1,6 @@
+from mlxtend.feature_selection import ExhaustiveFeatureSelector
+from sklearn import linear_model
+
 import main
 import pandas as pd
 import numpy as np
@@ -60,7 +63,7 @@ udf = tdf.drop([
     'Delta Time (decimal_years)', 'Wet Soil pH (pH units)', 'Dry Soil pH (pH units)', 'Dry Volume (cm3)',
     'Measurement Depth (ft)', 'Plot Size (m2)', '% Cover Shrub', '% Cover Carpet', 'Direction (Collar Number)',
     'Direction (Compass Degrees)', 'Pin Number', 'Observed Pin Height (mm)', 'Verified Pin Height (mm)',
-    'calendar_year',
+    'calendar_year', 'percent_waterlevel_complete',
     'Average Height Shrub (cm)', 'Average Height Carpet (cm)'  # I remove these because most values are nan and these vars are unimportant really
 ], axis=1)
 
@@ -74,14 +77,32 @@ if vertical == 'Accretion Rate (mm/yr)':
     udf['Average_Ac_cm_yr'] = udf['Accretion Rate (mm/yr)'] / 10  # mm to cm conversion
     # Make sure subsidence and RSLR are in correct units
     udf['Shallow Subsidence Rate (mm/yr)'] = udf[vertical] - udf['Surface Elevation Change Rate (cm/y)'] * 10
+    udf['Shallow Subsidence Rate (mm/yr)'] = [0 if val < 0 else val for val in udf['Shallow Subsidence Rate (mm/yr)']]
     udf['SEC Rate (mm/yr)'] = udf['Surface Elevation Change Rate (cm/y)'] * 10
+    # Now calcualte subsidence and RSLR
+    # Make the subsidence and rslr variables: using the
+    udf['SLR (mm/yr)'] = 2.0  # from jankowski
+    udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26) * -1
+    udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf[
+        'SLR (mm/yr)']
+    udf = udf.drop(['SLR (mm/yr)', 'Latitude'],
+                   axis=1)  # obviously drop because it is the same everywhere ; only used for calc
+
 elif vertical == 'Acc_rate_fullterm (cm/y)':
     udf = udf.drop('Accretion Rate (mm/yr)', axis=1)
     #  Make sure multiplier of mass acc is in the right units
     udf['Average_Ac_cm_yr'] = udf[vertical]
     # Make sure subsidence and RSLR are in correct units
-    udf['Shallow Subsidence Rate (mm/yr)'] = udf[vertical] - udf['Surface Elevation Change Rate (cm/y)']
-    udf['SEC Rate (mm/yr)'] = udf['Surface Elevation Change Rate (cm/y)']
+    udf['Shallow Subsidence Rate (mm/yr)'] = (udf[vertical] - udf['Surface Elevation Change Rate (cm/y)'])*10
+    udf['SEC Rate (cm/yr)'] = udf['Surface Elevation Change Rate (cm/y)']
+    # Now calcualte subsidence and RSLR
+    # Make the subsidence and rslr variables: using the
+    udf['SLR (mm/yr)'] = 2.0  # from jankowski
+    udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26) * -1
+    udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf[
+        'SLR (mm/yr)']*0.1
+    udf = udf.drop(['SLR (mm/yr)', 'Latitude'],
+                   axis=1)  # obviously drop because it is the same everywhere ; only used for calc
 else:
     print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 
@@ -102,23 +123,48 @@ else:
     print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 
 
-# Now calcualte subsidence and RSLR
-# Make the subsidence and rslr variables: using the
-udf['SLR (mm/yr)'] = 2.0  # from jankowski
-udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26)*-1
-udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf['SLR (mm/yr)']
-udf = udf.drop('SLR (mm/yr)',  axis=1)  # obviously drop because it is the same everywhere ; only used for calc
-
-# Drop al nans here (that way RSLR vector has same values as predictors) and remove variables related to outcome
-
-
 # Try to semi-standardize variables
+des = udf.describe()  # just to identify which variables are way of the scale
+udf['distance_to_river_km'] = udf['distance_to_river_m']/1000  # convert to km
+udf['river_width_mean_km'] = udf['width_mean']/1000
+udf['distance_to_water_km'] = udf['Distance_to_Water_m']/1000
+udf['land_lost_km2'] = udf['Land_Lost_m2']*0.000001  # convert to km2
+udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soil Specific Conductance (uS/cm)',
+                'Land_Lost_m2'], axis=1)
+udf = udf.rename(columns={'tss_med': 'tss_med_mg/l'})
 
+# conduct outlier removal which drops all nans
+import funcs
+rdf = funcs.outlierrm(udf, thres=3)
 
 # Now it is feature selection time
+# drop any variables related to the outcome
+rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
+    'Soil Moisture Content (%)', 'Bulk Density (g/cm3)', 'Organic Matter (%)', 'Organic Density (g/cm3)',
+    'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)'
+], axis=1)
 
 
+# Now for actual feature selection yay!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Make Dataset
+target = rdf[outcome].reset_index().drop('index', axis=1)
+predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
+# NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
+mlr = linear_model.LinearRegression()
+# l = linear_model.Lasso()
+feature_selector = ExhaustiveFeatureSelector(mlr,
+                                             min_features=1,
+                                             max_features=15,
+                                             scoring='r2',  # minimizes variance, at expense of bias
+                                             cv=5)  # 5 fold cross-validation
 
+efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
+
+print('Best CV r2 score: %.2f' % efsmlr.best_score_)
+print('Best subset (indices):', efsmlr.best_idx_)
+print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+
+bestfeatures = list(efsmlr.best_feature_names_)
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 
