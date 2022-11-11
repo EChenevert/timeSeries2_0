@@ -173,36 +173,36 @@ from sklearn.model_selection import train_test_split, cross_val_score, RepeatedK
 
 X, y = predictors[bestfeatures], target
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, shuffle=True, random_state=1)
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, shuffle=True, random_state=1)
 
 
 br = linear_model.BayesianRidge(fit_intercept=False, tol=10e-5)
-br.fit(X_train, y_train)
+br.fit(X, y)
 # Lets check those hyperparameters: lambda corresponds to precision over parameters... alpha is precision over posterior
 print("lambda (I know as alpha): ", br.lambda_)
 print("alpha (I know as beta): ", br.alpha_)
 # lets check the estimates of the w weight vector (from ML derived from least squares solution)
 print("learned weight vector: ", br.coef_)
-print(X_train.columns.values)
+print(X.columns.values)
 # Lets check out the training model score
-trainscore = br.score(X_train, y_train)
+trainscore = br.score(X, y)
 print("Training Score is: ", trainscore)
 # Predictions
 # So...... the predictions with this are weird.... we can only get a score that corresponds to R^2 it seems
 # But that seems weird because I have the weights.... can't I just compute the point estimates?
 #
-ypred, stdpred = br.predict(X_test, return_std=True)  # the y_pred is the mean of the pred_dist for that sample, the stdpred is the std for that sample
+ypred, stdpred = br.predict(X, return_std=True)  # the y_pred is the mean of the pred_dist for that sample, the stdpred is the std for that sample
 
 from sklearn.metrics import r2_score, mean_absolute_error
-mae = mean_absolute_error(y_test, ypred)
-r2 = r2_score(y_test, ypred)
+mae = mean_absolute_error(y, ypred)
+r2 = r2_score(y, ypred)
 print("Test MAE: ", mae)
 print("Test R^2: ", r2)
 
 # Do cross validation on whole dataset: cross val score fits the data each time to the inputted model, leaving some out and testing it against that left out
 # the splitting above was only for a test train split test (just for fun but below is more accurate)
 rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
-scores = cross_val_score(br, X, y, cv=rcv, scoring='r2')
+scores = cross_val_score(br, X, y.values.ravel(), cv=rcv, scoring='r2')
 print("Mean & median r2 repeated cross val: ", np.mean(scores), "  ", np.median(scores))
 
 # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
@@ -211,7 +211,7 @@ print("Mean & median r2 repeated cross val: ", np.mean(scores), "  ", np.median(
 # SHAP analysis
 import shap
 # add SHAPLEY
-data = X_test  # decided to use X_test because I wanted it to be on NEW data that the model was not fit too;
+data = X  # decided to use X_test because I wanted it to be on NEW data that the model was not fit too;
 
 masker = shap.maskers.Independent(data=data)
 
@@ -280,24 +280,24 @@ for key in marshdic:
 
     X, y = predictors[bestfeaturesM], target
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, shuffle=True, random_state=1)
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, shuffle=True, random_state=1)
 
     br = linear_model.BayesianRidge(fit_intercept=False, tol=10e-5)
-    br.fit(X_train, y_train)
+    br.fit(X, y)
     # Lets check those hyperparameters: lambda corresponds to precision over parameters... alpha is precision over posterior
     print("lambda (I know as alpha): ", br.lambda_)
     print("alpha (I know as beta): ", br.alpha_)
     # lets check the estimates of the w weight vector (from ML derived from least squares solution)
     print("learned weight vector: ", br.coef_)
-    print(X_train.columns.values)
+    print(X.columns.values)
     # Lets check out the training model score
-    trainscore = br.score(X_train, y_train)
+    trainscore = br.score(X, y)
     print("Training Score is: ", trainscore)
     # Predictions
     # So...... the predictions with this are weird.... we can only get a score that corresponds to R^2 it seems
     # But that seems weird because I have the weights.... can't I just compute the point estimates?
     #
-    ypred, stdpred = br.predict(X_test,
+    ypred, stdpred = br.predict(X,
                                 return_std=True)  # the y_pred is the mean of the pred_dist for that sample, the stdpred is the std for that sample
 
     # save standard deviations
@@ -305,8 +305,8 @@ for key in marshdic:
 
     from sklearn.metrics import r2_score, mean_absolute_error
 
-    mae = mean_absolute_error(y_test, ypred)
-    r2 = r2_score(y_test, ypred)
+    mae = mean_absolute_error(y, ypred)
+    r2 = r2_score(y, ypred)
     print("Test MAE: ", mae)
     print("Test R^2: ", r2)
 
