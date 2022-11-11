@@ -114,7 +114,7 @@ udf['Mineral Mass Accumulation (g/yr)'] = udf['Total Mass Accumulation (g/yr)'] 
 # Just drop the terms to be safew
 udf = udf.drop([vertical, 'Average_Ac_cm_yr', 'Total Mass Accumulation (g/yr)'], axis=1)
 # ########### Define outcome ########## SWITCH BETWEEN ORGANIC MASS ACC AND MINERLA MASS ACC
-outcome = 'Mineral Mass Accumulation (g/yr)'
+outcome = 'Organic Mass Accumulation (g/yr)'
 if outcome == 'Mineral Mass Accumulation (g/yr)':
     udf = udf.drop('Organic Mass Accumulation (g/yr)', axis=1)
 elif outcome == 'Organic Mass Accumulation (g/yr)':
@@ -154,8 +154,9 @@ mlr = linear_model.LinearRegression()
 # l = linear_model.Lasso()
 feature_selector = ExhaustiveFeatureSelector(mlr,
                                              min_features=1,
-                                             max_features=15,
+                                             max_features=5,  # I should only use 5 features (15 takes waaaaay too long)
                                              scoring='r2',  # minimizes variance, at expense of bias
+                                             print_progress=True,
                                              cv=5)  # 5 fold cross-validation
 
 efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
@@ -167,6 +168,46 @@ print('Best subset (corresponding names):', efsmlr.best_feature_names_)
 bestfeatures = list(efsmlr.best_feature_names_)
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
+#### NOTE: I should do separate tests to determine which split of the data is optimal ######
+# first split data set into test train
+from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
+
+X, y = predictors[bestfeatures], target
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=1)
+
+
+br = linear_model.BayesianRidge(fit_intercept=False, tol=10e-5, verbose=True)
+br.fit(X_train, y_train)
+# Lets check those hyperparameters: lambda corresponds to precision over parameters... alpha is precision over posterior
+print("lambda (I know as alpha): ", br.lambda_)
+print("alpha (I know as beta): ", br.alpha_)
+# lets check the estimates of the w weight vector (from ML derived from least squares solution)
+print("learned weight vector: ", br.coef_)
+print(X_train.columns.values)
+# Lets check out the training model score
+trainscore = br.score(X_train, y_train)
+print("Training Score is: ", trainscore)
+# Predictions
+# So...... the predictions with this are weird.... we can only get a score that corresponds to R^2 it seems
+# But that seems weird because I have the weights.... can't I just compute the point estimates?
+#
+ypred, stdpred = br.predict(X_test, return_std=True)  # the y_pred is the mean of the pred_dist for that sample, the stdpred is the std for that sample
+
+from sklearn.metrics import r2_score, mean_absolute_error
+mae = mean_absolute_error(y_test, ypred)
+r2 = r2_score(y_test, ypred)
+print("Test MAE: ", mae)
+print("Test R^2: ", r2)
+
+# Do cross validation on whole dataset: cross val score fits the data each time to the inputted model, leaving some out and testing it against that left out
+rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
+scores = cross_val_score(br, X, y, cv=rcv, scoring='r2')
+print("Mean & median r2 repeated cross val: ", np.mean(scores), "  ", np.median(scores))
+
+# So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
+# the coeffiencets themselves are zeros centered
+
 
 
 
