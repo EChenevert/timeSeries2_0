@@ -1,6 +1,6 @@
 from mlxtend.feature_selection import ExhaustiveFeatureSelector
 from sklearn import linear_model
-
+import matplotlib.pyplot as plt
 import main
 import pandas as pd
 import numpy as np
@@ -137,10 +137,11 @@ rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mea
 rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)',
     # taking out water level features because they are not super informative
-    '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
+    '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)', 'std_deviation_water_level(ft NAVD88)',
     'Staff Gauge (ft)',
     'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
-    'log_river_width_mean_km'  # i just dont like this variable because it has a sucky distribution
+    'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
+    'Bulk Density (g/cm3)', # 'Organic Matter (%)', 'Organic Density (g/cm3)'
 ], axis=1)
 
 
@@ -149,12 +150,11 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 target = rdf[outcome].reset_index().drop('index', axis=1)
 predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
 # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-mlr = linear_model.LinearRegression()
-# l = linear_model.Lasso()
-feature_selector = ExhaustiveFeatureSelector(mlr,
+br = linear_model.BayesianRidge()
+feature_selector = ExhaustiveFeatureSelector(br,
                                              min_features=1,
                                              max_features=5,  # I should only use 5 features (15 takes waaaaay too long)
-                                             scoring='r2',  # minimizes variance, at expense of bias
+                                             scoring='neg_root_mean_squared_error',  # minimizes variance, at expense of bias
                                              # print_progress=True,
                                              cv=5)  # 5 fold cross-validation
 
@@ -169,19 +169,55 @@ bestfeatures = list(efsmlr.best_feature_names_)
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
 # first split data set into test train
-from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, GridSearchCV, cross_val_predict
+from sklearn.metrics import r2_score
 
 X, y = predictors[bestfeatures], target
 
-lassomod = linear_model.Lasso(alpha=0.1)
+baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
+
+############################ Only conduct this analysis for plotting purposes ##########################################
+# holdr2s = []
+# holdpred_means = []
+# holdpred_stds = []
+# holdtests = []
+# for i in range(100):
+#     X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True)
+#     baymod.fit(X_train, y_train)
+#     pred_y_mean, pred_y_std = baymod.predict(X_test, return_std=True)
+#     holdpred_means.append(pred_y_mean)
+#     holdpred_stds.append(pred_y_std)
+#     holdtests.append(y_test)
+#     holdr2s.append(r2_score(y_test, pred_y_mean))
+#
+# import matplotlib.pyplot as plt
+# maxr2idx = np.argmax(holdr2s)
+# plt.figure()
+# plt.scatter(holdtests[maxr2idx], holdpred_means[maxr2idx])
+# plt.show()
+
+
+
+########################################################################################################################
 
 # Now use the selected features to create a model from the train data to test on the test data with repeated cv
 rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-scores = cross_val_score(lassomod, X, y.values.ravel(), scoring='r2',
+scores = cross_val_score(baymod, X, y.values.ravel(), scoring='r2',
                          cv=rcv, n_jobs=-1)
 rcvresults = scores
-print('#### LASSO MODEL ')
+print('#### Bayesian Regression MODEL ')
 print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
+
+cv_preds = cross_val_predict(baymod, X, y, cv=rcv, n_jobs=-1)
+
+fig, ax = plt.subplots()
+ax.scatter(y, cv_preds, edgecolors=(0, 0, 0))
+ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
+ax.set_title('Cross Validation Results Across Whole Dataset')
+ax.set_xlabel("Measured")
+ax.set_ylabel("Predicted")
+plt.show()
+
 # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
 # the coeffiencets themselves are zeros centered
 
@@ -189,14 +225,14 @@ print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
 # SHAP analysis
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.6, shuffle=True, random_state=1)
 import shap
-# officially fit lasso.... im boutta fit to the whole dataset tho... whcih is not exactly what theresults indicate
+# officially fit Bayesian.... im boutta fit to the whole dataset tho... whcih is not exactly what theresults indicate
 # add SHAPLEY
 # data = X  # decided to use X_test because I wanted it to be on NEW data that the model was not fit too;
-lassomod.fit(X, y)
+baymod.fit(X, y)
 # masker = shap.maskers.Independent(data=data)
 
 explainer = shap.Explainer(
-    lassomod.predict, X  # masker=masker, feature_names=data.columns
+    baymod.predict, X  # masker=masker, feature_names=data.columns
 )
 sv = explainer(X)
 shap.summary_plot(sv, features=X, feature_names=X.columns, plot_type='bar')
@@ -205,11 +241,9 @@ shap.summary_plot(sv, features=X, feature_names=X.columns, plot_type='bar')
 for var in X.columns.values:
     # Dependence plots
     shap.partial_dependence_plot(
-        var, lassomod.predict, X, ice=False,
+        var, baymod.predict, X, ice=False,
         model_expected_value=True, feature_expected_value=True
     )
-    # correposnding shap plots
-    shap.plots.scatter(sv[:, var])
 
 
 
@@ -236,13 +270,13 @@ for key in marshdic:
     target = mdf[outcome].reset_index().drop('index', axis=1)
     predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-    mlr = linear_model.LinearRegression()
-    # l = linear_model.Lasso()
-    feature_selector = ExhaustiveFeatureSelector(mlr,
+    # mlr = linear_model.LinearRegression()
+    br = linear_model.BayesianRidge()
+    feature_selector = ExhaustiveFeatureSelector(br,
                                                  min_features=1,
                                                  max_features=5,
                                                  # I should only use 5 features (15 takes waaaaay too long)
-                                                 scoring='r2',  # minimizes variance, at expense of bias
+                                                 scoring='neg_root_mean_squared_error',
                                                  # print_progress=True,
                                                  cv=5)  # 5 fold cross-validation
 
@@ -263,26 +297,25 @@ for key in marshdic:
 
     # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, shuffle=True, random_state=1)
 
-    lassomod = linear_model.Lasso(alpha=0.1)
-    # params = {
-    #     'alpha': [0.1, 0.33, 0.5, 1, 2, 3, 4, 5, 10, 20, 30, 50, 75, 100, 150, 200, 300]
-    # }
-    # # 624,000 grid space ish
-    # rs_model = GridSearchCV(lassomod, param_grid=params, scoring='r2', n_jobs=-1, cv=5,
-    #                         verbose=1)
-    # # rs_model = RandomForestRegressor()
-    # rs_model.fit(X, y.values.ravel())
-    # bestlasso = rs_model.best_estimator_
+    baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
 
-    print('the found alpha parameter is: ', lassomod.get_params()['alpha'])
-    hold_alphas[key] = lassomod.get_params()['alpha']
     # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-    scores = cross_val_score(lassomod, X, y.values.ravel(), scoring='r2',
+    scores = cross_val_score(baymod, X, y.values.ravel(), scoring='r2',
                              cv=rcv, n_jobs=-1)
     rcvresults = scores
     print('#### LASSO MODEL ', str(key))
     print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
+
+    cv_preds = cross_val_predict(baymod, X, y, cv=rcv, n_jobs=-1)
+
+    fig, ax = plt.subplots()
+    ax.scatter(y, cv_preds, edgecolors=(0, 0, 0))
+    ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
+    ax.set_title('Cross Validation Results: ' + str(key))
+    ax.set_xlabel("Measured")
+    ax.set_ylabel("Predicted")
+    plt.show()
 
     # # Do cross validation on whole dataset: cross val score fits the data each time to the inputted model, leaving some out and testing it against that left out
     # # the splitting above was only for a test train split test (just for fun but below is more accurate)
@@ -292,25 +325,54 @@ for key in marshdic:
 
     # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
     # the coeffiencets themselves are zeros centered
-    lassomod.fit(X, y)
+    baymod.fit(X, y)
     explainer = shap.Explainer(
-        lassomod.predict, X  # masker=masker, feature_names=data.columns
+        baymod.predict, X  # masker=masker, feature_names=data.columns
     )
     sv = explainer(X)
     shap.summary_plot(sv, features=X, feature_names=X.columns, plot_type='bar')
 
 
 
-# plot box plots of prediction std distributions
-import seaborn as sns
-import matplotlib.pyplot as plt
+# # plot box plots of prediction std distributions
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+#
+# fig, ax = plt.subplots()
+# ax.boxplot(preddic.values())
+# ax.set_xticklabels(preddic.keys())
+# plt.title('Bayesian Uncertainty Plot by Marsh type')
+# plt.ylabel('Variance of Prediction Distribution')
+# plt.xlabel("Marsh Type")
+# plt.show()
 
-fig, ax = plt.subplots()
-ax.boxplot(preddic.values())
-ax.set_xticklabels(preddic.keys())
-plt.title('Bayesian Uncertainty Plot by Marsh type')
-plt.ylabel('Variance of Prediction Distribution')
-plt.xlabel("Marsh Type")
-plt.show()
+
+############## Begin runs solely for plotting purposes [NOTE: these are for plotting and they will be optmistic results]
+
+# # Make Dataset
+# target = rdf[outcome].reset_index().drop('index', axis=1)
+# predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
+# # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
+# brTT = linear_model.BayesianRidge()
+# # l = linear_model.Lasso()
+# feature_selector = ExhaustiveFeatureSelector(brTT,
+#                                              min_features=1,
+#                                              max_features=5,  # I should only use 5 features (15 takes waaaaay too long)
+#                                              scoring='neg_root_mean_squared_error',  # minimizes variance, at expense of bias
+#                                              # print_progress=True,
+#                                              cv=5)  # 5 fold cross-validation
+#
+# efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
+#
+# print('Best CV r2 score: %.2f' % efsmlr.best_score_)
+# print('Best subset (indices):', efsmlr.best_idx_)
+# print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+#
+# bestfeaturesTT = list(efsmlr.best_feature_names_)
+
+
+
+
+
 
 

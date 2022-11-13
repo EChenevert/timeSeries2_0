@@ -255,9 +255,9 @@ for key in marshdic:
     target = mdf[outcome].reset_index().drop('index', axis=1)
     predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-    mlr = linear_model.LinearRegression()
+    br = linear_model.BayesianRidge()
     # l = linear_model.Lasso()
-    feature_selector = ExhaustiveFeatureSelector(mlr,
+    feature_selector = ExhaustiveFeatureSelector(br,
                                                  min_features=1,
                                                  max_features=5,
                                                  # I should only use 5 features (15 takes waaaaay too long)
