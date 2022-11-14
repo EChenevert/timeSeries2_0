@@ -208,15 +208,15 @@ rcvresults = scores
 print('#### Bayesian Regression MODEL ')
 print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
 
-cv_preds = cross_val_predict(baymod, X, y, cv=rcv, n_jobs=-1)
-
-fig, ax = plt.subplots()
-ax.scatter(y, cv_preds, edgecolors=(0, 0, 0))
-ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
-ax.set_title('Cross Validation Results Across Whole Dataset')
-ax.set_xlabel("Measured")
-ax.set_ylabel("Predicted")
-plt.show()
+# cv_preds = cross_val_predict(baymod, X, y, cv=5, n_jobs=-1)
+#
+# fig, ax = plt.subplots()
+# ax.scatter(y, cv_preds, edgecolors=(0, 0, 0))
+# ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
+# ax.set_title('Cross Validation Results Across Whole Dataset')
+# ax.set_xlabel("Measured")
+# ax.set_ylabel("Predicted")
+# plt.show()
 
 # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
 # the coeffiencets themselves are zeros centered
@@ -307,15 +307,15 @@ for key in marshdic:
     print('#### LASSO MODEL ', str(key))
     print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
 
-    cv_preds = cross_val_predict(baymod, X, y, cv=rcv, n_jobs=-1)
-
-    fig, ax = plt.subplots()
-    ax.scatter(y, cv_preds, edgecolors=(0, 0, 0))
-    ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
-    ax.set_title('Cross Validation Results: ' + str(key))
-    ax.set_xlabel("Measured")
-    ax.set_ylabel("Predicted")
-    plt.show()
+    # cv_preds = cross_val_predict(baymod, X, y, cv=5, n_jobs=-1)
+    #
+    # fig, ax = plt.subplots()
+    # ax.scatter(y, cv_preds, edgecolors=(0, 0, 0))
+    # ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
+    # ax.set_title('Cross Validation Results: ' + str(key))
+    # ax.set_xlabel("Measured")
+    # ax.set_ylabel("Predicted")
+    # plt.show()
 
     # # Do cross validation on whole dataset: cross val score fits the data each time to the inputted model, leaving some out and testing it against that left out
     # # the splitting above was only for a test train split test (just for fun but below is more accurate)
