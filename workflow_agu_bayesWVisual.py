@@ -141,7 +141,8 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Staff Gauge (ft)',
     'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    'Bulk Density (g/cm3)', # 'Organic Matter (%)', 'Organic Density (g/cm3)'
+    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)'
+    # 'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 
@@ -169,7 +170,8 @@ bestfeatures = list(efsmlr.best_feature_names_)
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
 # first split data set into test train
-from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, GridSearchCV, cross_val_predict
+from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, GridSearchCV, cross_val_predict, \
+    cross_validate
 from sklearn.metrics import r2_score
 
 X, y = predictors[bestfeatures], target
@@ -178,11 +180,16 @@ baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
 
 # Now use the selected features to create a model from the train data to test on the test data with repeated cv
 rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-scores = cross_val_score(baymod, X, y.values.ravel(), scoring='r2',
-                         cv=rcv, n_jobs=-1)
+scoreing = {
+
+}
+scores = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
+
 rcvresults = scores
 print('#### Bayesian Regression MODEL ')
-print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
+print(" mean RCV, and median RCV r2: ", np.mean(scores['test_r2']), np.median(scores['test_r2']))
+print(" mean RCV, and median RCV mae: ", np.mean(scores['test_neg_mean_absolute_error']),
+      np.median(scores['test_neg_mean_absolute_error']))
 
 
 # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
@@ -210,7 +217,6 @@ for var in X.columns.values:
         var, baymod.predict, X, ice=False,
         model_expected_value=True, feature_expected_value=True
     )
-
 
 
 # so it doesn't really work on the whole dataset
@@ -264,11 +270,17 @@ for key in marshdic:
 
     # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-    scores = cross_val_score(baymod, X, y.values.ravel(), scoring='r2',
-                             cv=rcv, n_jobs=-1)
-    rcvresults = scores
-    print('#### LASSO MODEL ', str(key))
-    print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
+    scores = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
+    print('#### Bayesian Regression MODEL ')
+    print(" mean RCV, and median RCV r2: ", np.mean(scores['test_r2']), np.median(scores['test_r2']))
+    print(" mean RCV, and median RCV mae: ", np.mean(scores['test_neg_mean_absolute_error']),
+          np.median(scores['test_neg_mean_absolute_error']))
+
+    # scores = cross_val_score(baymod, X, y.values.ravel(), scoring='r2',
+    #                          cv=rcv, n_jobs=-1)
+    # rcvresults = scores
+    # print('#### LASSO MODEL ', str(key))
+    # print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
 
     # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
     # the coeffiencets themselves are zeros centered

@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy import stats
 import numpy as np
+from sklearn.utils import shuffle
 import random
 
 from sklearn import linear_model
@@ -30,59 +31,33 @@ def outlierrm(df, thres=3):
     return df
 
 
-def cross_validation_split(dataset, folds: int):
+def kfold_split(dataset: pd.DataFrame, num_folds: int):
     """
-    https://www.kaggle.com/code/burhanykiyakoglu/k-nn-logistic-regression-k-fold-cv-from-scratch
-    :param dataset:
-    :param folds:
-    :return:
+    Will split the daatset into kfolds
     """
-    dataset_split = []
-    df_copy = dataset
-    fold_size = int(df_copy.shape[0] / folds)
-
-    # for loop to save each fold
-    for i in range(folds):
-        fold = []
-        # while loop to add elements to the folds
-        while len(fold) < fold_size:
-            # select a random element
-            r = random.randrange(df_copy.shape[0])
-            # determine the index of this element
-            index = df_copy.index[r]
-            # save the randomly selected line
-            fold.append(df_copy.loc[index].values.tolist())
-            # delete the randomly selected line from
-            # dataframe not to select again
-            df_copy = df_copy.drop(index)
-        # save the fold
-        dataset_split.append(np.asarray(fold))
-
-    return dataset_split
+    foldsize = int(len(dataset)/num_folds)
+    # Just split the SHUFFLED df in order
+    phi_ls = []
+    for i in range(num_folds):
+        phi_ls.append(dataset.iloc[foldsize*i:foldsize*i + foldsize, :])
+    return phi_ls
 
 
-def kfoldCV(dataset, f=5, model="bayesian linear regression"):
-    data = cross_validation_split(dataset, f)
-    result = []
-    # determine training and test sets
-    for i in range(f):
-        r = list(range(f))
-        r.pop(i)
-        for j in r:
-            if j == r[0]:
-                cv = data[j]
-            else:
-                cv = np.concatenate((cv, data[j]), axis=0)
+def repeated_fivefold_cross_validation(dataset: pd.DataFrame, num_folds: int, repeats: int,
+                                       model: linear_model.BayesianRidge, target_column: str):
+    """
+    """
+    for i in range(repeats):
+        shuff_df = shuffle(dataset)
+        target = shuff_df[target_column]
+        target_ls = kfold_split(target, num_folds)
+        fold_ls = kfold_split(shuff_df, num_folds)
+        # Model Training
+        for j in range(len(fold_ls)-1):
+            phifold = fold_ls[j]
 
-        # apply the selected model
-        # default is logistic regression
-        if model == "bayesian linear regression":
-            # default: alpha=0.1, num_iter=30000
-            # if you change alpha or num_iter, adjust the below line
-            br = linear_model.BayesianRidge()
-            br.fit(cv[:, 0:4], cv[:, 4])
-            ypred, ystd = br.predict(data[i][:, 0:4])
+            model.fit()
 
 
-    return result
+
 
