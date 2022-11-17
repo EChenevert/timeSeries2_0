@@ -197,24 +197,22 @@ print(" mean RCV, and median RCV mae: ", np.mean(scores_for_repeated['test_neg_m
 # Plot the distribution of the learned parameters from the Repeated CV
 # Boxplot of weights
 weight_matrix = []  # First collect the weights per CV run
-eff_lambda_arr = []
+eff_lambda_arr_whole_dataset = []  # collect the strength of regularization term
 for model in scores_for_repeated['estimator']:
     weight_matrix.append(list(model.coef_))
-    eff_lambda_arr.append(model.a)
+    eff_lambda_arr_whole_dataset.append(model.lambda_/model.alpha_)  # this is effective lambda per [Bishop], differences from [B] include gamma priors, hi probabilities for low alpha/beta values, and diff names
 weight_df = pd.DataFrame(weight_matrix, columns=bestfeatures)
 
+plt.figure()
 sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
               font_scale=0.7)
-fig, ax = plt.subplots((7, 10))
-ax.set_title('Distribution of Learned Weight Vectors')
-sns.boxplot(
-    data=weight_df,
-    notch=True
-)
+fig, ax = plt.subplots()
+plt.title('Distribution of Learned Weight Vectors: All Sites')
+sns.boxplot(data=weight_df, notch=True, showfliers=False, palette="Greys")
 funcs.wrap_labels(ax, 10)
 plt.show()
 
-# Boxplot of the learned effective lambda (regularizor)
+# Boxplot of the learned effective lambda (regularizor) ==> See at end of script
 
 
 # This RCV picks the best model from the repeated 3fold CV
@@ -244,6 +242,7 @@ for i in range(100):  # for 100 repeates
     predicted = predicted + list(cross_val_predict(baymod, X, y.values.ravel(), cv=try_cv))
     y_ls += list(y.values.ravel())
 
+plt.figure()
 fig, ax = plt.subplots(figsize=(6, 4))
 hb = ax.hexbin(x=y_ls, y=predicted,
                gridsize=30, edgecolors='grey',
@@ -271,7 +270,9 @@ interdf = gdf[gdf['Community'] == 'Intermediate']
 marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf}
 
 preddic = {}
-hold_alphas = {}
+# hold_alphas = {}
+hold_marsh_weights = {}
+hold_marsh_regularizors = {}
 marsh_params_dic = {}
 for key in marshdic:
     print(key)
@@ -323,6 +324,19 @@ for key in marshdic:
     print(" mean RCV, and median RCV mae: ", np.mean(scores_repeated_marsh['test_neg_mean_absolute_error']),
           np.median(scores_repeated_marsh['test_neg_mean_absolute_error']))
 
+    # Plot the distribution of the learned parameters from the Repeated CV
+    # Boxplot of weights
+    weight_matrix = []  # First collect the weights per CV run
+    eff_lambda_arr = []  # collect the strength of regularization term
+    for model in scores_repeated_marsh['estimator']:
+        weight_matrix.append(list(model.coef_))
+        eff_lambda_arr.append(
+            model.lambda_ / model.alpha_)  # this is effective lambda per [Bishop], differences from [B] include gamma priors, hi probabilities for low alpha/beta values, and diff names
+    weight_df = pd.DataFrame(weight_matrix, columns=bestfeaturesM)
+    hold_marsh_weights[str(key)] = weight_df
+    hold_marsh_regularizors[str(key)] = eff_lambda_arr
+
+
     # This RCV picks the best model from the repeated 3fold CV
     gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
     gridsearcher.fit(X, y.values.ravel())
@@ -332,17 +346,6 @@ for key in marshdic:
     # Try to get the number of determined parameters here from the sigma ....
     # Add this dic to the mash+params_dic to make a dic within a dic
     marsh_params_dic[str(key)] = alldata_dic
-
-    # ###### Scores for simple 3 fold split ############
-    # cv = KFold(n_splits=3)
-    # scores_pred_marsh = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'),
-    #                                    n_jobs=-1)
-    #
-    # print('#### Bayesian Regression MODEL: 3 Fold split ')
-    # print(" mean RCV, and median RCV r2: ", np.mean(scores_pred_marsh['test_r2']),
-    #       np.median(scores_pred_marsh['test_r2']))
-    # print(" mean RCV, and median RCV mae: ", np.mean(scores_pred_marsh['test_neg_mean_absolute_error']),
-    #       np.median(scores_pred_marsh['test_neg_mean_absolute_error']))
 
     # Visualize the data
     predicted = []
@@ -364,3 +367,23 @@ for key in marshdic:
     ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
     # plt.savefig('Scatter04.png', dpi=500, bbox_inches='tight')
     plt.show()
+
+
+# Plot the distribution of weight parameters for the marsh runs
+for key in hold_marsh_weights:
+    sns.set_theme(style='darkgrid', rc={'figure.dpi': 147}, font_scale=0.7)
+    fig, ax = plt.subplots()
+    ax.set_title('Distribution of Learned Weight Vectors: ' + str(key) + " Sites")
+    sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
+    funcs.wrap_labels(ax, 10)
+    plt.show()
+
+# Plot the distribution of the eff_reg parameter for each run
+eff_reg_df = pd.DataFrame(hold_marsh_regularizors)
+sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
+              font_scale=0.7)
+fig, ax = plt.subplots()
+ax.set_title('Distribution of Learned Effective Regularization Parameters')
+sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="Greys")
+funcs.wrap_labels(ax, 10)
+plt.show()
