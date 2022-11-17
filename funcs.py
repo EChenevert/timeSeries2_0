@@ -59,5 +59,20 @@ def repeated_fivefold_cross_validation(dataset: pd.DataFrame, num_folds: int, re
             model.fit()
 
 
+import textwrap
+def wrap_labels(ax, width, break_long_words=False):
+    """
+    https://medium.com/dunder-data/automatically-wrap-graph-labels-in-matplotlib-and-seaborn-a48740bc9ce
+    :param ax:
+    :param width:
+    :param break_long_words:
+    :return:
+    """
+    labels = []
+    for label in ax.get_xticklabels():
+        text = label.get_text()
+        labels.append(textwrap.fill(text, width=width,
+                      break_long_words=break_long_words))
+    ax.set_xticklabels(labels, rotation=0)
 
 

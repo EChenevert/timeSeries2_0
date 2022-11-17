@@ -187,12 +187,35 @@ baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
 # just checking if repeated is in line with simple 3 fold cross val
 rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
 scores_for_repeated = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'),
-                                     n_jobs=-1)
+                                     n_jobs=-1, return_estimator=True)
 
 print('#### Bayesian Regression MODEL: 100x 3-Fold split')
 print(" mean RCV, and median RCV r2: ", np.mean(scores_for_repeated['test_r2']), np.median(scores_for_repeated['test_r2']))
 print(" mean RCV, and median RCV mae: ", np.mean(scores_for_repeated['test_neg_mean_absolute_error']),
       np.median(scores_for_repeated['test_neg_mean_absolute_error']))
+
+# Plot the distribution of the learned parameters from the Repeated CV
+# Boxplot of weights
+weight_matrix = []  # First collect the weights per CV run
+eff_lambda_arr = []
+for model in scores_for_repeated['estimator']:
+    weight_matrix.append(list(model.coef_))
+    eff_lambda_arr.append(model.a)
+weight_df = pd.DataFrame(weight_matrix, columns=bestfeatures)
+
+sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
+              font_scale=0.7)
+fig, ax = plt.subplots((7, 10))
+ax.set_title('Distribution of Learned Weight Vectors')
+sns.boxplot(
+    data=weight_df,
+    notch=True
+)
+funcs.wrap_labels(ax, 10)
+plt.show()
+
+# Boxplot of the learned effective lambda (regularizor)
+
 
 # This RCV picks the best model from the repeated 3fold CV
 gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
@@ -204,13 +227,14 @@ alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best
 
 
 ################ Scores for basic model generalization (using whole dataset for cross val) ###############################
-cv = KFold(n_splits=3)
-scores_for_pred = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
-
-print('#### Bayesian Regression MODEL: 3 Fold split ')
-print(" mean RCV, and median RCV r2: ", np.mean(scores_for_pred['test_r2']), np.median(scores_for_pred['test_r2']))
-print(" mean RCV, and median RCV mae: ", np.mean(scores_for_pred['test_neg_mean_absolute_error']),
-      np.median(scores_for_pred['test_neg_mean_absolute_error']))
+# cv = KFold(n_splits=3)
+# scores_for_pred = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'),
+#                                  n_jobs=-1, return_estimator=True)
+#
+# print('#### Bayesian Regression MODEL: 3 Fold split ')
+# print(" mean RCV, and median RCV r2: ", np.mean(scores_for_pred['test_r2']), np.median(scores_for_pred['test_r2']))
+# print(" mean RCV, and median RCV mae: ", np.mean(scores_for_pred['test_neg_mean_absolute_error']),
+#       np.median(scores_for_pred['test_neg_mean_absolute_error']))
 
 # Visualize the data
 predicted = []
@@ -223,11 +247,11 @@ for i in range(100):  # for 100 repeates
 fig, ax = plt.subplots(figsize=(6, 4))
 hb = ax.hexbin(x=y_ls, y=predicted,
                gridsize=30, edgecolors='grey',
-               cmap='inferno', mincnt=1)
+               cmap='Reds', mincnt=1)
 ax.set_axisbelow(True)
 ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
-ax.set_title("Whole Dataset: 3-fold")
+ax.set_title("Whole Dataset: 100x Repeated 3-fold CV")
 cb = fig.colorbar(hb, ax=ax)
 ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
 # plt.savefig('Scatter04.png', dpi=500, bbox_inches='tight')
@@ -289,7 +313,9 @@ for key in marshdic:
 
     # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-    scores_repeated_marsh = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
+    scores_repeated_marsh = cross_validate(baymod, X, y.values.ravel(), cv=rcv,
+                                           scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1, return_estimator=True)
+
     # scores = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
     print('#### Bayesian Regression MODEL: Repeated 3-Fold results')
     print(" mean RCV, and median RCV r2: ", np.mean(scores_repeated_marsh['test_r2']),
@@ -307,27 +333,17 @@ for key in marshdic:
     # Add this dic to the mash+params_dic to make a dic within a dic
     marsh_params_dic[str(key)] = alldata_dic
 
-    ###### Scores for simple 3 fold split ############
-    cv = KFold(n_splits=3)
-    scores_pred_marsh = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'),
-                                       n_jobs=-1)
-
-    print('#### Bayesian Regression MODEL: 3 Fold split ')
-    print(" mean RCV, and median RCV r2: ", np.mean(scores_pred_marsh['test_r2']),
-          np.median(scores_pred_marsh['test_r2']))
-    print(" mean RCV, and median RCV mae: ", np.mean(scores_pred_marsh['test_neg_mean_absolute_error']),
-          np.median(scores_pred_marsh['test_neg_mean_absolute_error']))
-
-    # # Visualize the data
-    # predicted = cross_val_predict(baymod, X, y.values.ravel(), cv=cv)
+    # ###### Scores for simple 3 fold split ############
+    # cv = KFold(n_splits=3)
+    # scores_pred_marsh = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'),
+    #                                    n_jobs=-1)
     #
-    # fig, ax = plt.subplots()
-    # ax.scatter(y, predicted, edgecolors=(0, 0, 0))
-    # ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
-    # ax.set_xlabel("Measured")
-    # ax.set_ylabel("Predicted")
-    # plt.title(str(key) + " : 3 fold CV")
-    # plt.show()
+    # print('#### Bayesian Regression MODEL: 3 Fold split ')
+    # print(" mean RCV, and median RCV r2: ", np.mean(scores_pred_marsh['test_r2']),
+    #       np.median(scores_pred_marsh['test_r2']))
+    # print(" mean RCV, and median RCV mae: ", np.mean(scores_pred_marsh['test_neg_mean_absolute_error']),
+    #       np.median(scores_pred_marsh['test_neg_mean_absolute_error']))
+
     # Visualize the data
     predicted = []
     y_ls = []
@@ -339,11 +355,11 @@ for key in marshdic:
     fig, ax = plt.subplots(figsize=(6, 4))
     hb = ax.hexbin(x=y_ls, y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='inferno', mincnt=1)
+                   cmap='Reds', mincnt=1)
     ax.set_axisbelow(True)
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
-    ax.set_title(str(key) + " : 3-fold")
+    ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
     cb = fig.colorbar(hb, ax=ax)
     ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
     # plt.savefig('Scatter04.png', dpi=500, bbox_inches='tight')
