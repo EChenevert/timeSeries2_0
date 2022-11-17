@@ -5,7 +5,8 @@ import main
 import pandas as pd
 import numpy as np
 import funcs
-
+from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, GridSearchCV, cross_val_predict, \
+    cross_validate, KFold
 
 # Everything I need for this should be within the file "D:\Etienne\fall2022\agu_data"
 ## Data from CIMS
@@ -150,6 +151,11 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 # Make Dataset
 target = rdf[outcome].reset_index().drop('index', axis=1)
 predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
+#### Scale: Because this way I can extract feature importances
+from sklearn.preprocessing import MinMaxScaler
+scalar_whole = MinMaxScaler()
+predictors = pd.DataFrame(scalar_whole.fit_transform(predictors), columns=predictors.columns.values)
+
 # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
 br = linear_model.BayesianRidge()
 feature_selector = ExhaustiveFeatureSelector(br,
@@ -157,7 +163,7 @@ feature_selector = ExhaustiveFeatureSelector(br,
                                              max_features=5,  # I should only use 5 features (15 takes waaaaay too long)
                                              scoring='neg_root_mean_squared_error',  # minimizes variance, at expense of bias
                                              # print_progress=True,
-                                             cv=5)  # 5 fold cross-validation
+                                             cv=3)  # 5 fold cross-validation
 
 efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
 
@@ -170,53 +176,50 @@ bestfeatures = list(efsmlr.best_feature_names_)
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
 # first split data set into test train
-from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold, GridSearchCV, cross_val_predict, \
-    cross_validate
-from sklearn.metrics import r2_score
 
 X, y = predictors[bestfeatures], target
 
 baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
 
 # Now use the selected features to create a model from the train data to test on the test data with repeated cv
+# just checking if repeated is in line with simple 3 fold cross val
 rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-scoreing = {
+scores_for_repeated = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'),
+                                     n_jobs=-1)
 
-}
-scores = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
+print('#### Bayesian Regression MODEL: 100x 3-Fold split')
+print(" mean RCV, and median RCV r2: ", np.mean(scores_for_repeated['test_r2']), np.median(scores_for_repeated['test_r2']))
+print(" mean RCV, and median RCV mae: ", np.mean(scores_for_repeated['test_neg_mean_absolute_error']),
+      np.median(scores_for_repeated['test_neg_mean_absolute_error']))
 
-rcvresults = scores
-print('#### Bayesian Regression MODEL ')
-print(" mean RCV, and median RCV r2: ", np.mean(scores['test_r2']), np.median(scores['test_r2']))
-print(" mean RCV, and median RCV mae: ", np.mean(scores['test_neg_mean_absolute_error']),
-      np.median(scores['test_neg_mean_absolute_error']))
+# This RCV picks the best model from the repeated 3fold CV
+gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
+gridsearcher.fit(X, y.values.ravel())
+best_br = gridsearcher.best_estimator_
+alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best_br.alpha_, 'lambda': best_br.lambda_,
+               'sigma': best_br.sigma_}
+## Try to get the number of determined parameters here from the sigma ....
 
 
-# So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
-# the coeffiencets themselves are zeros centered
+################ Scores for basic model generalization (using whole dataset for cross val) ###############################
+cv = KFold(n_splits=3)
+scores_for_pred = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
 
-# SHAP analysis
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.6, shuffle=True, random_state=1)
-import shap
-# officially fit Bayesian.... im boutta fit to the whole dataset tho... whcih is not exactly what theresults indicate
-# add SHAPLEY
-# data = X  # decided to use X_test because I wanted it to be on NEW data that the model was not fit too;
-baymod.fit(X, y)
-# masker = shap.maskers.Independent(data=data)
+print('#### Bayesian Regression MODEL: 3 Fold split ')
+print(" mean RCV, and median RCV r2: ", np.mean(scores_for_pred['test_r2']), np.median(scores_for_pred['test_r2']))
+print(" mean RCV, and median RCV mae: ", np.mean(scores_for_pred['test_neg_mean_absolute_error']),
+      np.median(scores_for_pred['test_neg_mean_absolute_error']))
 
-explainer = shap.Explainer(
-    baymod.predict, X  # masker=masker, feature_names=data.columns
-)
-sv = explainer(X)
-shap.summary_plot(sv, features=X, feature_names=X.columns, plot_type='bar')
+# Visualize the data
+predicted = cross_val_predict(baymod, X, y.values.ravel(), cv=cv)
 
-# Do dependence plots for these guys
-for var in X.columns.values:
-    # Dependence plots
-    shap.partial_dependence_plot(
-        var, baymod.predict, X, ice=False,
-        model_expected_value=True, feature_expected_value=True
-    )
+fig, ax = plt.subplots()
+ax.scatter(y, predicted, edgecolors=(0, 0, 0))
+ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
+ax.set_xlabel("Measured")
+ax.set_ylabel("Predicted")
+plt.title("Whole Dataset: 3-fold")
+plt.show()
 
 
 # so it doesn't really work on the whole dataset
@@ -234,22 +237,27 @@ marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Interm
 
 preddic = {}
 hold_alphas = {}
+marsh_params_dic = {}
 for key in marshdic:
     print(key)
     mdf = marshdic[key]  # .drop('Community', axis=1)
     # It is preshuffled so i do not think ordering will be a problem
     target = mdf[outcome].reset_index().drop('index', axis=1)
     predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
+    # Scale: because I want feature importances
+    scalar_marsh = MinMaxScaler()
+    predictors = pd.DataFrame(scalar_marsh.fit_transform(predictors), columns=predictors.columns.values)
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
     # mlr = linear_model.LinearRegression()
     br = linear_model.BayesianRidge()
+
     feature_selector = ExhaustiveFeatureSelector(br,
                                                  min_features=1,
                                                  max_features=5,
                                                  # I should only use 5 features (15 takes waaaaay too long)
                                                  scoring='neg_root_mean_squared_error',
                                                  # print_progress=True,
-                                                 cv=5)  # 5 fold cross-validation
+                                                 cv=3)  # 5 fold cross-validation
 
     efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
 
@@ -270,25 +278,43 @@ for key in marshdic:
 
     # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-    scores = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
-    print('#### Bayesian Regression MODEL ')
-    print(" mean RCV, and median RCV r2: ", np.mean(scores['test_r2']), np.median(scores['test_r2']))
-    print(" mean RCV, and median RCV mae: ", np.mean(scores['test_neg_mean_absolute_error']),
-          np.median(scores['test_neg_mean_absolute_error']))
+    scores_repeated_marsh = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
+    # scores = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'), n_jobs=-1)
+    print('#### Bayesian Regression MODEL: Repeated 3-Fold results')
+    print(" mean RCV, and median RCV r2: ", np.mean(scores_repeated_marsh['test_r2']),
+          np.median(scores_repeated_marsh['test_r2']))
+    print(" mean RCV, and median RCV mae: ", np.mean(scores_repeated_marsh['test_neg_mean_absolute_error']),
+          np.median(scores_repeated_marsh['test_neg_mean_absolute_error']))
 
-    # scores = cross_val_score(baymod, X, y.values.ravel(), scoring='r2',
-    #                          cv=rcv, n_jobs=-1)
-    # rcvresults = scores
-    # print('#### LASSO MODEL ', str(key))
-    # print(" mean RCV, and median RCV r2: ", np.mean(scores), np.median(scores))
+    # This RCV picks the best model from the repeated 3fold CV
+    gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
+    gridsearcher.fit(X, y.values.ravel())
+    best_br = gridsearcher.best_estimator_
+    alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best_br.alpha_,
+                   'lambda': best_br.lambda_, 'sigma': best_br.sigma_}
+    # Try to get the number of determined parameters here from the sigma ....
+    # Add this dic to the mash+params_dic to make a dic within a dic
+    marsh_params_dic[str(key)] = alldata_dic
 
-    # So now we have to use shap to make sure that we interpret the model correctly (due to scaling probs and see the mean centered influences)
-    # the coeffiencets themselves are zeros centered
-    baymod.fit(X, y)
-    explainer = shap.Explainer(
-        baymod.predict, X  # masker=masker, feature_names=data.columns
-    )
-    sv = explainer(X)
-    shap.summary_plot(sv, features=X, feature_names=X.columns, plot_type='bar')
+    ###### Scores for simple 3 fold split ############
+    cv = KFold(n_splits=3)
+    scores_pred_marsh = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'),
+                                       n_jobs=-1)
 
+    print('#### Bayesian Regression MODEL: 3 Fold split ')
+    print(" mean RCV, and median RCV r2: ", np.mean(scores_pred_marsh['test_r2']),
+          np.median(scores_pred_marsh['test_r2']))
+    print(" mean RCV, and median RCV mae: ", np.mean(scores_pred_marsh['test_neg_mean_absolute_error']),
+          np.median(scores_pred_marsh['test_neg_mean_absolute_error']))
+
+    # Visualize the data
+    predicted = cross_val_predict(baymod, X, y.values.ravel(), cv=cv)
+
+    fig, ax = plt.subplots()
+    ax.scatter(y, predicted, edgecolors=(0, 0, 0))
+    ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=4)
+    ax.set_xlabel("Measured")
+    ax.set_ylabel("Predicted")
+    plt.title(str(key) + " : 3 fold CV")
+    plt.show()
 
