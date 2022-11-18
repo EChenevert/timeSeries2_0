@@ -1,6 +1,8 @@
 from mlxtend.feature_selection import ExhaustiveFeatureSelector
 from sklearn import linear_model
 import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score, mean_absolute_error
+
 import main
 import pandas as pd
 import numpy as np
@@ -139,12 +141,13 @@ rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mea
 # drop any variables related to the outcome
 rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)',
-    # taking out water level features because they are not super informative
-    '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)', 'std_deviation_water_level(ft NAVD88)',
-    'Staff Gauge (ft)',
     'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
+    # taking out water level features because they are not super informative
+    # Putting Human in the loop
+    '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
+    'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)'
+    # 'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
     # 'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
@@ -154,15 +157,15 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 target = rdf[outcome].reset_index().drop('index', axis=1)
 predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
 #### Scale: Because this way I can extract feature importances
-from sklearn.preprocessing import MinMaxScaler
-scalar_whole = MinMaxScaler()
+from sklearn.preprocessing import StandardScaler
+scalar_whole = StandardScaler()
 predictors = pd.DataFrame(scalar_whole.fit_transform(predictors), columns=predictors.columns.values)
 
 # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
 br = linear_model.BayesianRidge()
 feature_selector = ExhaustiveFeatureSelector(br,
                                              min_features=1,
-                                             max_features=5,  # I should only use 5 features (15 takes waaaaay too long)
+                                             max_features=6,  # I should only use 5 features (15 takes waaaaay too long)
                                              scoring='neg_root_mean_squared_error',  # minimizes variance, at expense of bias
                                              # print_progress=True,
                                              cv=3)  # 5 fold cross-validation
@@ -183,64 +186,190 @@ X, y = predictors[bestfeatures], target
 
 baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
 
-# Now use the selected features to create a model from the train data to test on the test data with repeated cv
-# just checking if repeated is in line with simple 3 fold cross val
-rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
-scores_for_repeated = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'),
-                                     n_jobs=-1, return_estimator=True)
-
-print('#### Bayesian Regression MODEL: 100x 3-Fold split')
-print(" mean RCV, and median RCV r2: ", np.mean(scores_for_repeated['test_r2']), np.median(scores_for_repeated['test_r2']))
-print(" mean RCV, and median RCV mae: ", np.mean(scores_for_repeated['test_neg_mean_absolute_error']),
-      np.median(scores_for_repeated['test_neg_mean_absolute_error']))
-
-# Plot the distribution of the learned parameters from the Repeated CV
-# Boxplot of weights
-weight_matrix = []  # First collect the weights per CV run
-eff_lambda_arr_whole_dataset = []  # collect the strength of regularization term
-for model in scores_for_repeated['estimator']:
-    weight_matrix.append(list(model.coef_))
-    eff_lambda_arr_whole_dataset.append(model.lambda_/model.alpha_)  # this is effective lambda per [Bishop], differences from [B] include gamma priors, hi probabilities for low alpha/beta values, and diff names
-weight_df = pd.DataFrame(weight_matrix, columns=bestfeatures)
-
-plt.figure()
-sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
-              font_scale=0.7)
-fig, ax = plt.subplots()
-plt.title('Distribution of Learned Weight Vectors: All Sites')
-sns.boxplot(data=weight_df, notch=True, showfliers=False, palette="Greys")
-funcs.wrap_labels(ax, 10)
-plt.show()
+# # Now use the selected features to create a model from the train data to test on the test data with repeated cv
+# # just checking if repeated is in line with simple 3 fold cross val
+# rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
+# scores_for_repeated = cross_validate(baymod, X, y.values.ravel(), cv=rcv, scoring=('r2', 'neg_mean_absolute_error'),
+#                                      n_jobs=-1, return_estimator=True)
+#
+# print('#### Bayesian Regression MODEL: 100x 3-Fold split')
+# print(" mean RCV, and median RCV r2: ", np.mean(scores_for_repeated['test_r2']), np.median(scores_for_repeated['test_r2']))
+# print(" mean RCV, and median RCV mae: ", np.mean(scores_for_repeated['test_neg_mean_absolute_error']),
+#       np.median(scores_for_repeated['test_neg_mean_absolute_error']))
+#
+# # Plot the distribution of the learned parameters from the Repeated CV
+# # Boxplot of weights
+# weight_matrix = []  # First collect the weights per CV run
+# eff_lambda_arr_whole_dataset = []  # collect the strength of regularization term
+# determined_params_ls = []  # Will be a list of lists in whcih the first index in argsort index and second index is the
+# for model in scores_for_repeated['estimator']:
+#     weight_matrix.append(list(model.coef_))
+#     eff_lambda_arr_whole_dataset.append(model.lambda_/model.alpha_)  # this is effective lambda per [Bishop], differences from [B] include gamma priors, hi probabilities for low alpha/beta values, and diff names
+#     inv_SN = np.linalg.inv(model.sigma_)
+#     # determined_params_ls.append()
+# weight_df = pd.DataFrame(weight_matrix, columns=bestfeatures)
+#
+# plt.figure()
+# sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
+#               font_scale=0.7)
+# fig, ax = plt.subplots()
+# plt.title('Distribution of Learned Weight Vectors: All Sites')
+# sns.boxplot(data=weight_df, notch=True, showfliers=False, palette="Greys")
+# funcs.wrap_labels(ax, 10)
+# plt.show()
 
 # Boxplot of the learned effective lambda (regularizor) ==> See at end of script
 
 
-# This RCV picks the best model from the repeated 3fold CV
-gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
-gridsearcher.fit(X, y.values.ravel())
-best_br = gridsearcher.best_estimator_
-alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best_br.alpha_, 'lambda': best_br.lambda_,
-               'sigma': best_br.sigma_}
-## Try to get the number of determined parameters here from the sigma ....
+# # This RCV picks the best model from the repeated 3fold CV
+# gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
+# gridsearcher.fit(X, y.values.ravel())
+# best_br = gridsearcher.best_estimator_
+# alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best_br.alpha_, 'lambda': best_br.lambda_,
+#                'sigma': best_br.sigma_}
+# ## Try to get the number of determined parameters here from the sigma ....
 
 
 ################ Scores for basic model generalization (using whole dataset for cross val) ###############################
-# cv = KFold(n_splits=3)
-# scores_for_pred = cross_validate(baymod, X, y.values.ravel(), cv=cv, scoring=('r2', 'neg_mean_absolute_error'),
-#                                  n_jobs=-1, return_estimator=True)
-#
-# print('#### Bayesian Regression MODEL: 3 Fold split ')
-# print(" mean RCV, and median RCV r2: ", np.mean(scores_for_pred['test_r2']), np.median(scores_for_pred['test_r2']))
-# print(" mean RCV, and median RCV mae: ", np.mean(scores_for_pred['test_neg_mean_absolute_error']),
-#       np.median(scores_for_pred['test_neg_mean_absolute_error']))
-
 # Visualize the data
+# Error Holders
 predicted = []
 y_ls = []
+# log lists
+r2_total_means_log = []
+r2_total_medians_log = []
+mae_total_means_log = []
+mae_total_medians_log = []
+# unlogged lists
+r2_total_means_exp = []
+r2_total_medians_exp = []
+mae_total_means_exp = []
+mae_total_medians_exp = []
+
+# parameter holders
+weight_vecotr_ls = []
+regularizor_ls = []
+
 for i in range(100):  # for 100 repeates
     try_cv = KFold(n_splits=3, shuffle=True)
+    results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
+                                         scoring=('r2', 'neg_mean_absolute_error'),
+                                         n_jobs=-1, return_estimator=True)
+
+    r2_ls = []
+    mae_ls = []
+    r2_ls = []
+    mae_ls = []
+    for train_index, test_index in try_cv.split():
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        # Fit the model
+        baymod.fit(X_train, y_train)
+        # Collect parameters
+        weights = baymod.coef_
+        weight_vecotr_ls.append(weights)
+        regularizor = baymod.lambda_ / baymod.alpha_
+        regularizor_ls.append(regularizor)
+        # Compute error metrics
+        ypred = baymod.predict(X_test)
+        # Log(y) metrics: particularly for MAE
+        r2_log = r2_score(y_test, ypred)
+        r2_log_ls.append(r2_log)
+        mae_log = mean_absolute_error(y_test, ypred)
+        mae_log_ls.append(mae_log)
+        # Unlog the prediction through exponentiation: particularly for mae
+        ypred_exp = np.exp(ypred)
+        y_test_exp = np.exp(y_test)
+
+        r2_exp = r2_score(y_test_exp, ypred_exp)
+        r2_exp_ls.append(r2_exp)
+        mae_exp = mean_absolute_error(y_test_exp, ypred_exp)
+        mae_exp_ls.append(mae_exp)
+
+    # Average over the Kfold first: for logged outcome
+    r2_mean_log = np.mean(r2_log_ls)
+    r2_total_means_log.append(r2_mean_log)
+    r2_median_log = np.median(r2_log_ls)
+    r2_total_medians_log.append(r2_median_log)
+    mae_mean_log = np.mean(mae_log_ls)
+    mae_total_means_log.append(mae_mean_log)
+    mae_median_log = np.median(mae_log_ls)
+    mae_total_medians_log.append(mae_median_log)
+    # Average over the Kfold first: for unlogged outcome (exponentiated)
+    r2_mean_exp = np.mean(r2_exp_ls)
+    r2_total_means_exp.append(r2_mean_exp)
+    r2_median_exp = np.median(r2_exp_ls)
+    r2_total_medians_exp.append(r2_median_exp)
+    mae_mean_exp = np.mean(mae_exp_ls)
+    mae_total_means_exp.append(mae_mean_exp)
+    mae_median_exp = np.median(mae_exp_ls)
+    mae_total_medians_exp.append(mae_median_exp)
+
+
+    # r2_log_ls = []
+    # mae_log_ls = []
+    # r2_exp_ls = []
+    # mae_exp_ls = []
+    # for train_index, test_index in try_cv.split():
+    #     X_train, X_test = X[train_index], X[test_index]
+    #     y_train, y_test = y[train_index], y[test_index]
+    #     # Fit the model
+    #     baymod.fit(X_train, y_train)
+    #     # Collect parameters
+    #     weights = baymod.coef_
+    #     weight_vecotr_ls.append(weights)
+    #     regularizor = baymod.lambda_ / baymod.alpha_
+    #     regularizor_ls.append(regularizor)
+    #     # Compute error metrics
+    #     ypred = baymod.predict(X_test)
+    #     # Log(y) metrics: particularly for MAE
+    #     r2_log = r2_score(y_test, ypred)
+    #     r2_log_ls.append(r2_log)
+    #     mae_log = mean_absolute_error(y_test, ypred)
+    #     mae_log_ls.append(mae_log)
+    #     # Unlog the prediction through exponentiation: particularly for mae
+    #     ypred_exp = np.exp(ypred)
+    #     y_test_exp = np.exp(y_test)
+    #
+    #     r2_exp = r2_score(y_test_exp, ypred_exp)
+    #     r2_exp_ls.append(r2_exp)
+    #     mae_exp = mean_absolute_error(y_test_exp, ypred_exp)
+    #     mae_exp_ls.append(mae_exp)
+    #
+    # # Average over the Kfold first: for logged outcome
+    # r2_mean_log = np.mean(r2_log_ls)
+    # r2_total_means_log.append(r2_mean_log)
+    # r2_median_log = np.median(r2_log_ls)
+    # r2_total_medians_log.append(r2_median_log)
+    # mae_mean_log = np.mean(mae_log_ls)
+    # mae_total_means_log.append(mae_mean_log)
+    # mae_median_log = np.median(mae_log_ls)
+    # mae_total_medians_log.append(mae_median_log)
+    # # Average over the Kfold first: for unlogged outcome (exponentiated)
+    # r2_mean_exp = np.mean(r2_exp_ls)
+    # r2_total_means_exp.append(r2_mean_exp)
+    # r2_median_exp = np.median(r2_exp_ls)
+    # r2_total_medians_exp.append(r2_median_exp)
+    # mae_mean_exp = np.mean(mae_exp_ls)
+    # mae_total_means_exp.append(mae_mean_exp)
+    # mae_median_exp = np.median(mae_exp_ls)
+    # mae_total_medians_exp.append(mae_median_exp)
+
     predicted = predicted + list(cross_val_predict(baymod, X, y.values.ravel(), cv=try_cv))
     y_ls += list(y.values.ravel())
+
+# # Now calculate the mean of th kfold means for each repeat: Logged accretion
+# r2_final_mean_log = np.mean(r2_total_means_log)
+# r2_median_log = np.median(r2_total_medians_log)
+# mae_mean_log = np.mean(mae_total_means_log)
+# mae_median_log = np.median(mae_total_medians_log)
+
+# # Now for unlogged accretion : exponentiated
+# r2_final_mean_exp = np.mean(r2_total_means_exp)
+# r2_median_exp = np.median(r2_total_medians_exp)
+# mae_mean_exp = np.mean(mae_total_means_exp)
+# mae_median_exp = np.median(mae_total_medians_exp)
+
 
 plt.figure()
 fig, ax = plt.subplots(figsize=(6, 4))
@@ -281,7 +410,7 @@ for key in marshdic:
     target = mdf[outcome].reset_index().drop('index', axis=1)
     predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
-    scalar_marsh = MinMaxScaler()
+    scalar_marsh = StandardScaler()
     predictors = pd.DataFrame(scalar_marsh.fit_transform(predictors), columns=predictors.columns.values)
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
     # mlr = linear_model.LinearRegression()
@@ -289,7 +418,7 @@ for key in marshdic:
 
     feature_selector = ExhaustiveFeatureSelector(br,
                                                  min_features=1,
-                                                 max_features=5,
+                                                 max_features=6,
                                                  # I should only use 5 features (15 takes waaaaay too long)
                                                  scoring='neg_root_mean_squared_error',
                                                  # print_progress=True,
@@ -310,7 +439,7 @@ for key in marshdic:
 
     X, y = predictors[bestfeaturesM], target
 
-    baymod = linear_model.BayesianRidge()  #.LinearRegression()  #Lasso(alpha=0.1)
+    baymod = linear_model.BayesianRidge()
 
     # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
@@ -337,15 +466,15 @@ for key in marshdic:
     hold_marsh_regularizors[str(key)] = eff_lambda_arr
 
 
-    # This RCV picks the best model from the repeated 3fold CV
-    gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
-    gridsearcher.fit(X, y.values.ravel())
-    best_br = gridsearcher.best_estimator_
-    alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best_br.alpha_,
-                   'lambda': best_br.lambda_, 'sigma': best_br.sigma_}
-    # Try to get the number of determined parameters here from the sigma ....
-    # Add this dic to the mash+params_dic to make a dic within a dic
-    marsh_params_dic[str(key)] = alldata_dic
+    # # This RCV picks the best model from the repeated 3fold CV
+    # gridsearcher = GridSearchCV(baymod, param_grid={}, cv=rcv, scoring='neg_root_mean_squared_error')
+    # gridsearcher.fit(X, y.values.ravel())
+    # best_br = gridsearcher.best_estimator_
+    # alldata_dic = {'weights': best_br.coef_, 'features': bestfeatures, 'alpha': best_br.alpha_,
+    #                'lambda': best_br.lambda_, 'sigma': best_br.sigma_}
+    # # Try to get the number of determined parameters here from the sigma ....
+    # # Add this dic to the mash+params_dic to make a dic within a dic
+    # marsh_params_dic[str(key)] = alldata_dic
 
     # Visualize the data
     predicted = []
@@ -384,6 +513,6 @@ sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
-sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="Greys")
+sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
 plt.show()
