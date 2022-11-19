@@ -858,7 +858,7 @@ for key in marshdic:
     ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\" + str(key) + "_scaledXY_nolog_cv.png", dpi=500,
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png", dpi=500,
                 bbox_inches='tight')
     plt.show()
 
