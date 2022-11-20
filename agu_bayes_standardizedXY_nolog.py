@@ -147,8 +147,8 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    # 'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    # 'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
+    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
+    'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 
@@ -164,21 +164,23 @@ predictors = pd.DataFrame(scalar_Xwhole.fit_transform(predictors), columns=predi
 target = pd.DataFrame(scalar_ywhole.fit_transform(target), columns=[outcome])
 
 # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-br = linear_model.BayesianRidge(fit_intercept=False)
-feature_selector = ExhaustiveFeatureSelector(br,
-                                             min_features=1,
-                                             max_features=6,  # I should only use 5 features (15 takes waaaaay too long)
-                                             scoring='neg_root_mean_squared_error',  # minimizes variance, at expense of bias
-                                             # print_progress=True,
-                                             cv=3)  # 5 fold cross-validation
+# br = linear_model.BayesianRidge(fit_intercept=False)
+# feature_selector = ExhaustiveFeatureSelector(br,
+#                                              min_features=1,
+#                                              max_features=6,  # I should only use 5 features (15 takes waaaaay too long)
+#                                              scoring='neg_root_mean_squared_error',  # minimizes variance, at expense of bias
+#                                              # print_progress=True,
+#                                              cv=3)  # 5 fold cross-validation
+#
+# efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
+#
+# print('Best CV r2 score: %.2f' % efsmlr.best_score_)
+# print('Best subset (indices):', efsmlr.best_idx_)
+# print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+#
+# bestfeatures = list(efsmlr.best_feature_names_)
 
-efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
-
-print('Best CV r2 score: %.2f' % efsmlr.best_score_)
-print('Best subset (indices):', efsmlr.best_idx_)
-print('Best subset (corresponding names):', efsmlr.best_feature_names_)
-
-bestfeatures = list(efsmlr.best_feature_names_)
+bestfeatures = funcs.backward_elimination(predictors, target.values.ravel())
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
@@ -314,7 +316,7 @@ ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy
 ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv_human.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -343,23 +345,25 @@ for key in marshdic:
     target = pd.DataFrame(scalar_ymarsh.fit_transform(target), columns=[outcome])
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
     # mlr = linear_model.LinearRegression()
-    br = linear_model.BayesianRidge(fit_intercept=False)
+    # br = linear_model.BayesianRidge(fit_intercept=False)
 
-    feature_selector = ExhaustiveFeatureSelector(br,
-                                                 min_features=1,
-                                                 max_features=6,
-                                                 # I should only use 5 features (15 takes waaaaay too long)
-                                                 scoring='neg_root_mean_squared_error',
-                                                 # print_progress=True,
-                                                 cv=3)  # 5 fold cross-validation
+    # feature_selector = ExhaustiveFeatureSelector(br,
+    #     #                                              min_features=1,
+    #     #                                              max_features=6,
+    #     #                                              # I should only use 5 features (15 takes waaaaay too long)
+    #     #                                              scoring='neg_root_mean_squared_error',
+    #     #                                              # print_progress=True,
+    #     #                                              cv=3)  # 5 fold cross-validation
+    #     #
+    #     # efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
+    #     #
+    #     # print('Best CV r2 score: %.2f' % efsmlr.best_score_)
+    #     # print('Best subset (indices):', efsmlr.best_idx_)
+    #     # print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+    #     #
+    #     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    efsmlr = feature_selector.fit(predictors, target.values.ravel())  # these are not scaled... to reduce data leakage
-
-    print('Best CV r2 score: %.2f' % efsmlr.best_score_)
-    print('Best subset (indices):', efsmlr.best_idx_)
-    print('Best subset (corresponding names):', efsmlr.best_feature_names_)
-
-    bestfeaturesM = list(efsmlr.best_feature_names_)
+    bestfeaturesM = funcs.backward_elimination(predictors, target.values.ravel(), num_feats=10, significance_level=0.05)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
     #### NOTE: I should do separate tests to determine which split of the data is optimal ######
@@ -507,7 +511,7 @@ for key in marshdic:
     weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeaturesM)
     hold_marsh_weights[str(key)] = weight_df
     hold_marsh_regularizors[str(key)] = regularizor_ls
-    hold_marsh_regularizors[str(key)] = certainty_ls
+    hold_marsh_weight_certainty[str(key)] = certainty_ls
 
     # Now calculate the mean of th kfold means for each repeat: scaled accretion
     r2_final_mean = np.mean(r2_total_means)
@@ -543,7 +547,7 @@ for key in marshdic:
     ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -557,7 +561,7 @@ for key in hold_marsh_weights:
     ax.set_title('Distribution of Learned Weight Vectors: ' + str(key) + " Sites")
     sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_boxplot.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -570,7 +574,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -584,7 +588,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Certainty in Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()

@@ -3,7 +3,7 @@ from scipy import stats
 import numpy as np
 from sklearn.utils import shuffle
 import random
-
+import statsmodels.api as sm
 from sklearn import linear_model
 
 
@@ -75,4 +75,18 @@ def wrap_labels(ax, width, break_long_words=False):
                       break_long_words=break_long_words))
     ax.set_xticklabels(labels, rotation=0)
 
+
+# https://www.analyticsvidhya.com/blog/2020/10/a-comprehensive-guide-to-feature-selection-using-wrapper-methods-in-python/#:~:text=1.-,Forward%20selection,with%20all%20other%20remaining%20features.
+def backward_elimination(data, target, num_feats=5, significance_level=0.05):
+    features = data.columns.tolist()
+    while(len(features)>0):
+        features_with_constant = sm.add_constant(data[features])
+        p_values = sm.OLS(target, features_with_constant).fit().pvalues[1:]
+        max_p_value = p_values.max()
+        if(max_p_value >= significance_level) or (len(features) > num_feats):
+            excluded_feature = p_values.idxmax()
+            features.remove(excluded_feature)
+        else:
+            break
+    return features
 
