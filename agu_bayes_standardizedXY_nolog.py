@@ -147,8 +147,8 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
+    # 'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
+    # 'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 
@@ -316,7 +316,7 @@ ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy
 ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv_human.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -547,7 +547,7 @@ for key in marshdic:
     ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -561,7 +561,7 @@ for key in hold_marsh_weights:
     ax.set_title('Distribution of Learned Weight Vectors: ' + str(key) + " Sites")
     sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_boxplot_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_boxplot.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -574,7 +574,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -588,7 +588,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Certainty in Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
