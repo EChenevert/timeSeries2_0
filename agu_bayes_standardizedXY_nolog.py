@@ -239,6 +239,8 @@ predicted = []
 y_ls = []
 hold_marsh_weights = {}
 hold_marsh_regularizors = {}
+hold_marsh_weight_certainty = {}
+
 # # lists
 # r2_total_means = []
 # r2_total_medians = []
@@ -396,7 +398,6 @@ hold_marsh_regularizors = {}
 #             bbox=dict(boxstyle='round', fc='w'),
 #             size=8, ha='left', va='top')
 # plt.show()
-# fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\all_sites_cv.png", dpi=500, bbox_inches='tight')
 
 # so it doesn't really work on the whole dataset
 # lets break into groups
@@ -414,6 +415,7 @@ mae_inv_total_medians = []
 # parameter holders
 weight_vector_ls = []
 regularizor_ls = []
+certainty_ls = []
 
 for i in range(100):  # for 100 repeates
     try_cv = KFold(n_splits=3, shuffle=True)
@@ -437,6 +439,12 @@ for i in range(100):  # for 100 repeates
         weight_vector_ls.append(weights)
         regularizor = baymod.lambda_ / baymod.alpha_
         regularizor_ls.append(regularizor)
+        eigs = np.linalg.eigh(baymod.sigma_)
+        certainty = []
+        for eig in eigs[0]:
+            certainty.append(eig/(eig + baymod.lambda_))
+        certainty = np.sum(certainty)
+        certainty_ls.append(certainty)
         # Compute error metrics
         ypred = baymod.predict(X_test)
         # Metrics for scaled y: particularly for MAE
@@ -537,6 +545,7 @@ for i in range(100):  # for 100 repeates
 weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeatures)
 hold_marsh_weights['All Sites'] = weight_df
 hold_marsh_regularizors['All Sites'] = regularizor_ls
+hold_marsh_weight_certainty['All Sites'] = certainty_ls
 
 # Now calculate the mean of th kfold means for each repeat: scaled accretion
 r2_final_mean = np.mean(r2_total_means)
@@ -699,6 +708,7 @@ for key in marshdic:
     # parameter holders
     weight_vector_ls = []
     regularizor_ls = []
+    certainty_ls = []
 
     for i in range(100):  # for 100 repeates
         try_cv = KFold(n_splits=3, shuffle=True)
@@ -722,6 +732,12 @@ for key in marshdic:
             weight_vector_ls.append(weights)
             regularizor = baymod.lambda_ / baymod.alpha_
             regularizor_ls.append(regularizor)
+            eigs = np.linalg.eigh(baymod.sigma_)
+            certainty = []
+            for eig in eigs[0]:
+                certainty.append(eig / (eig + baymod.lambda_))
+            certainty = np.sum(certainty)
+            certainty_ls.append(certainty)
             # Compute error metrics
             ypred = baymod.predict(X_test)
             # Metrics for scaled y: particularly for MAE
@@ -823,6 +839,7 @@ for key in marshdic:
     weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeaturesM)
     hold_marsh_weights[str(key)] = weight_df
     hold_marsh_regularizors[str(key)] = regularizor_ls
+    hold_marsh_regularizors[str(key)] = certainty_ls
 
     # Now calculate the mean of th kfold means for each repeat: scaled accretion
     r2_final_mean = np.mean(r2_total_means)
@@ -858,7 +875,8 @@ for key in marshdic:
     ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png", dpi=500,
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png",
+                dpi=500,
                 bbox_inches='tight')
     plt.show()
 
@@ -871,6 +889,9 @@ for key in hold_marsh_weights:
     ax.set_title('Distribution of Learned Weight Vectors: ' + str(key) + " Sites")
     sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_boxplot.png",
+                dpi=500,
+                bbox_inches='tight')
     plt.show()
 
 # Plot the distribution of the eff_reg parameter for each run
@@ -881,4 +902,21 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot.png",
+            dpi=500,
+            bbox_inches='tight')
+plt.show()
+
+
+# Plot the distribution of the certainty in parameters for each run
+certainty_df = pd.DataFrame(hold_marsh_weight_certainty)
+sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
+              font_scale=0.7)
+fig, ax = plt.subplots()
+ax.set_title('Distribution of Bayesian Certainty in Parameters')
+sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
+funcs.wrap_labels(ax, 10)
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot.png",
+            dpi=500,
+            bbox_inches='tight')
 plt.show()

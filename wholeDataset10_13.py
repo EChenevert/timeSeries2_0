@@ -71,7 +71,7 @@ bestxgb = rs_model.best_estimator_
 
 # Now use the selected features to create a model from the train data to test on the test data with repeated cv
 rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
-scores = cross_val_score(bestxgb, X, y.values.ravel(), scoring='neg_mean_squared_error',
+scores = cross_val_score(bestxgb, X, y.values.ravel(), scoring='r2',
                          cv=rcv, n_jobs=-1)
 rcvresults = scores
 print('### BEST XBG WHOLE DATASET ###')
