@@ -195,6 +195,7 @@ y_ls = []
 hold_marsh_weights = {}
 hold_marsh_regularizors = {}
 hold_marsh_weight_certainty = {}
+hold_prediction_certainty = {}
 
 r2_total_means = []
 r2_total_medians = []
@@ -209,7 +210,8 @@ mae_inv_total_medians = []
 # parameter holders
 weight_vector_ls = []
 regularizor_ls = []
-certainty_ls = []
+weight_certainty_ls = []
+prediction_certainty_ls = []
 
 for i in range(100):  # for 100 repeates
     try_cv = KFold(n_splits=3, shuffle=True)
@@ -222,7 +224,8 @@ for i in range(100):  # for 100 repeates
     # Inversed lists
     r2_inv_ls = []
     mae_inv_ls = []
-
+    # Certainty lists
+    pred_certain = []
     for train_index, test_index in try_cv.split(X):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
@@ -234,13 +237,15 @@ for i in range(100):  # for 100 repeates
         regularizor = baymod.lambda_ / baymod.alpha_
         regularizor_ls.append(regularizor)
         eigs = np.linalg.eigh(baymod.sigma_)
-        certainty = []
+        weight_certainty = []
         for eig in eigs[0]:
-            certainty.append(eig/(eig + baymod.lambda_))
-        certainty = np.sum(certainty)
-        certainty_ls.append(certainty)
+            weight_certainty.append(eig/(eig + baymod.lambda_))
+        weight_certainty = np.sum(weight_certainty)
+        weight_certainty_ls.append(weight_certainty)
         # Compute error metrics
-        ypred = baymod.predict(X_test)
+        ypred, ystd = baymod.predict(X_test, return_std=True)
+        # Save average std on each prediction
+        pred_certain.append(np.mean(ystd))
         # Metrics for scaled y: particularly for MAE
         r2 = r2_score(y_test, ypred)
         r2_ls.append(r2)
@@ -254,6 +259,8 @@ for i in range(100):  # for 100 repeates
                                       scalar_ywhole.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
         mae_inv_ls.append(mae_inv)
 
+    # Average certainty in predictions
+    prediction_certainty_ls.append(np.mean(pred_certain))
     # Average predictions over the Kfold first: scaled
     r2_mean = np.mean(r2_ls)
     r2_total_means.append(r2_mean)
@@ -280,7 +287,8 @@ for i in range(100):  # for 100 repeates
 weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeatures)
 hold_marsh_weights['All Sites'] = weight_df
 hold_marsh_regularizors['All Sites'] = regularizor_ls
-hold_marsh_weight_certainty['All Sites'] = certainty_ls
+hold_marsh_weight_certainty['All Sites'] = weight_certainty_ls
+hold_prediction_certainty['All Sites'] = prediction_certainty_ls
 
 # Now calculate the mean of th kfold means for each repeat: scaled accretion
 r2_final_mean = np.mean(r2_total_means)
@@ -296,13 +304,13 @@ mae_inv_final_median = np.median(mae_inv_total_medians)
 fig, ax = plt.subplots(figsize=(6, 4))
 hb = ax.hexbin(x=y_ls, y=predicted,
                gridsize=30, edgecolors='grey',
-               cmap='Reds', mincnt=1)
+               cmap='YlGnBu', mincnt=1)
 ax.set_facecolor('white')
 ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
 ax.set_title("All Sites: 100x Repeated 3-fold CV")
 cb = fig.colorbar(hb, ax=ax)
-ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
+ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=3)
 
 ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
@@ -440,7 +448,8 @@ for key in marshdic:
     # parameter holders
     weight_vector_ls = []
     regularizor_ls = []
-    certainty_ls = []
+    weight_certainty_ls = []
+    prediction_certainty_ls = []
 
     for i in range(100):  # for 100 repeates
         try_cv = KFold(n_splits=3, shuffle=True)
@@ -453,6 +462,8 @@ for key in marshdic:
         # Inversed lists
         r2_inv_ls = []
         mae_inv_ls = []
+        # Certainty
+        pred_certain = []
 
         for train_index, test_index in try_cv.split(X):
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
@@ -465,13 +476,15 @@ for key in marshdic:
             regularizor = baymod.lambda_ / baymod.alpha_
             regularizor_ls.append(regularizor)
             eigs = np.linalg.eigh(baymod.sigma_)
-            certainty = []
+            weight_certainty = []
             for eig in eigs[0]:
-                certainty.append(eig / (eig + baymod.lambda_))
-            certainty = np.sum(certainty)
-            certainty_ls.append(certainty)
+                weight_certainty.append(eig / (eig + baymod.lambda_))
+            weight_certainty = np.sum(weight_certainty)
+            weight_certainty_ls.append(weight_certainty)
             # Compute error metrics
-            ypred = baymod.predict(X_test)
+            ypred, ystd = baymod.predict(X_test, return_std=True)
+            # Average std
+            pred_certain.append(np.mean(ystd))
             # Metrics for scaled y: particularly for MAE
             r2 = r2_score(y_test, ypred)
             r2_ls.append(r2)
@@ -485,6 +498,8 @@ for key in marshdic:
                                           scalar_ymarsh.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
             mae_inv_ls.append(mae_inv)
 
+        # Average certainty
+        prediction_certainty_ls.append(np.mean(pred_certain))
         # Average predictions over the Kfold first: scaled
         r2_mean = np.mean(r2_ls)
         r2_total_means.append(r2_mean)
@@ -511,7 +526,8 @@ for key in marshdic:
     weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeaturesM)
     hold_marsh_weights[str(key)] = weight_df
     hold_marsh_regularizors[str(key)] = regularizor_ls
-    hold_marsh_weight_certainty[str(key)] = certainty_ls
+    hold_marsh_weight_certainty[str(key)] = weight_certainty_ls
+    hold_prediction_certainty[str(key)] = prediction_certainty_ls
 
     # Now calculate the mean of th kfold means for each repeat: scaled accretion
     r2_final_mean = np.mean(r2_total_means)
@@ -527,13 +543,13 @@ for key in marshdic:
     fig, ax = plt.subplots(figsize=(6, 4))
     hb = ax.hexbin(x=y_ls, y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='Reds', mincnt=1)
+                   cmap='YlGnBu', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
     ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
     cb = fig.colorbar(hb, ax=ax)
-    ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
+    ax.plot([y.min(), y.max()], [y.min(), y.max()], "k--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -580,7 +596,7 @@ fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regulari
 plt.show()
 
 
-# Plot the distribution of the certainty in parameters for each run
+# Plot the distribution of the certainty of parameters for each run
 certainty_df = pd.DataFrame(hold_marsh_weight_certainty)
 sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
               font_scale=0.7)
@@ -589,6 +605,19 @@ ax.set_title('Distribution of Bayesian Certainty in Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot.png",
+            dpi=500,
+            bbox_inches='tight')
+plt.show()
+
+# Plot the distribution of the certainty of predictions for each run
+pred_certainty_df = pd.DataFrame(hold_prediction_certainty)
+sns.set_theme(style='darkgrid', rc={'figure.dpi': 147},
+              font_scale=0.7)
+fig, ax = plt.subplots()
+ax.set_title('Distribution of Bayesian Certainty in Parameters')
+sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
+funcs.wrap_labels(ax, 10)
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\pred_certainty_scaledXY_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
