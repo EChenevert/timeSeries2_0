@@ -154,14 +154,14 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 
 # Now for actual feature selection yay!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Make Dataset
-target = rdf[outcome].reset_index().drop('index', axis=1)
-predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
+t = rdf[outcome].reset_index().drop('index', axis=1)
+phi = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
 #### Scale: Because this way I can extract feature importances
 from sklearn.preprocessing import StandardScaler
 scalar_Xwhole = StandardScaler()
 scalar_ywhole = StandardScaler()
-predictors = pd.DataFrame(scalar_Xwhole.fit_transform(predictors), columns=predictors.columns.values)
-target = pd.DataFrame(scalar_ywhole.fit_transform(target), columns=[outcome])
+predictors_scaled = pd.DataFrame(scalar_Xwhole.fit_transform(phi), columns=phi.columns.values)
+target_scaled = pd.DataFrame(scalar_ywhole.fit_transform(t), columns=[outcome])
 
 # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
 # br = linear_model.BayesianRidge(fit_intercept=False)
@@ -180,19 +180,21 @@ target = pd.DataFrame(scalar_ywhole.fit_transform(target), columns=[outcome])
 #
 # bestfeatures = list(efsmlr.best_feature_names_)
 
-bestfeatures = funcs.backward_elimination(predictors, target.values.ravel())
+bestfeatures = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel())
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
 # first split data set into test train
 
-X, y = predictors[bestfeatures], target
+X, y = predictors_scaled[bestfeatures], target_scaled
 
-baymod = linear_model.BayesianRidge(fit_intercept=False)  #.LinearRegression()  #Lasso(alpha=0.1)
+baymod = linear_model.BayesianRidge(fit_intercept=True)  #.LinearRegression()  #Lasso(alpha=0.1)
 
 predicted = []
 y_ls = []
 hold_marsh_weights = {}
+hold_unscaled_weights = {}
+hold_intercept = {}
 hold_marsh_regularizors = {}
 hold_marsh_weight_certainty = {}
 hold_prediction_certainty = {}
@@ -209,6 +211,8 @@ mae_inv_total_medians = []
 
 # parameter holders
 weight_vector_ls = []
+unscaled_w_ls = []
+intercept_ls = []
 regularizor_ls = []
 weight_certainty_ls = []
 prediction_certainty_ls = []
@@ -232,7 +236,12 @@ for i in range(100):  # for 100 repeates
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
         # Fit the model
         baymod.fit(X_train, y_train.values.ravel())
-        # Collect parameters
+        # collect unscaled parameters
+        unscaled_weights, intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeatures],
+                                                                                       t, baymod)
+        unscaled_w_ls.append(unscaled_weights)
+        intercept_ls.append(intercept)
+        # Collect scaled parameters
         weights = baymod.coef_
         weight_vector_ls.append(weights)
         regularizor = baymod.lambda_ / baymod.alpha_
@@ -287,10 +296,13 @@ for i in range(100):  # for 100 repeates
 
 # Add each of the model parameters to a dictionary
 weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeatures)
-hold_marsh_weights['All Sites'] = weight_df
-hold_marsh_regularizors['All Sites'] = regularizor_ls
-hold_marsh_weight_certainty['All Sites'] = weight_certainty_ls
-hold_prediction_certainty['All Sites'] = prediction_certainty_ls
+unscaled_weight_df = pd.DataFrame(unscaled_w_ls, columns=bestfeatures)
+hold_marsh_weights['All'] = weight_df
+hold_unscaled_weights['All'] = unscaled_weight_df
+hold_intercept['All'] = intercept_ls
+hold_marsh_regularizors['All'] = regularizor_ls
+hold_marsh_weight_certainty['All'] = weight_certainty_ls
+hold_prediction_certainty['All'] = prediction_certainty_ls
 
 # Now calculate the mean of th kfold means for each repeat: scaled accretion
 r2_final_mean = np.mean(r2_total_means)
@@ -346,13 +358,13 @@ for key in marshdic:
     print(key)
     mdf = marshdic[key]  # .drop('Community', axis=1)
     # It is preshuffled so i do not think ordering will be a problem
-    target = mdf[outcome].reset_index().drop('index', axis=1)
-    predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
+    t = mdf[outcome].reset_index().drop('index', axis=1)
+    phi = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
     scalar_Xmarsh = StandardScaler()
     scalar_ymarsh = StandardScaler()
-    predictors = pd.DataFrame(scalar_Xmarsh.fit_transform(predictors), columns=predictors.columns.values)
-    target = pd.DataFrame(scalar_ymarsh.fit_transform(target), columns=[outcome])
+    predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
+    target_scaled = pd.DataFrame(scalar_ymarsh.fit_transform(t), columns=[outcome])
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
     # mlr = linear_model.LinearRegression()
     # br = linear_model.BayesianRidge(fit_intercept=False)
@@ -373,16 +385,17 @@ for key in marshdic:
     #     #
     #     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors, target.values.ravel(), num_feats=10, significance_level=0.05)
+    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=10,
+                                               significance_level=0.05)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
     #### NOTE: I should do separate tests to determine which split of the data is optimal ######
     # first split data set into test train
     from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
 
-    X, y = predictors[bestfeaturesM], target
+    X, y = predictors_scaled[bestfeaturesM], target_scaled
 
-    baymod = linear_model.BayesianRidge(fit_intercept=False)
+    baymod = linear_model.BayesianRidge(fit_intercept=True)
 
     # # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     # rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
@@ -449,6 +462,8 @@ for key in marshdic:
 
     # parameter holders
     weight_vector_ls = []
+    unscaled_w_ls = []
+    intercept_ls = []
     regularizor_ls = []
     weight_certainty_ls = []
     prediction_certainty_ls = []
@@ -472,7 +487,12 @@ for key in marshdic:
             y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
-            # Collect parameters
+            # Collect the unscaled parameters
+            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeaturesM],
+                                                                                              t, baymod)
+            unscaled_w_ls.append(un_scaled_weights)
+            intercept_ls.append(y_intercept)
+            # Collect scaled parameters
             weights = baymod.coef_
             weight_vector_ls.append(weights)
             regularizor = baymod.lambda_ / baymod.alpha_
@@ -527,10 +547,14 @@ for key in marshdic:
 
     # Add each of the model parameters to a dictionary
     weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeaturesM)
+    unscaled_weight_df = pd.DataFrame(unscaled_w_ls, columns=bestfeaturesM)
     hold_marsh_weights[str(key)] = weight_df
+    hold_unscaled_weights[str(key)] = unscaled_weight_df
+    hold_intercept[str(key)] = intercept_ls
     hold_marsh_regularizors[str(key)] = regularizor_ls
     hold_marsh_weight_certainty[str(key)] = weight_certainty_ls
     hold_prediction_certainty[str(key)] = prediction_certainty_ls
+
 
     # Now calculate the mean of th kfold means for each repeat: scaled accretion
     r2_final_mean = np.mean(r2_total_means)
@@ -577,10 +601,24 @@ for key in marshdic:
 for key in hold_marsh_weights:
     sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
     fig, ax = plt.subplots()
-    ax.set_title('Distribution of Learned Weight Vectors: ' + str(key) + " Sites")
+    ax.set_title('Distribution of Learned Weight Vectors [Scaled]: ' + str(key) + " Sites")
     sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_boxplot_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
+                "_scaledXY_nolog_boxplot_human.png",
+                dpi=500,
+                bbox_inches='tight')
+    plt.show()
+
+# Plot the distribution of weight parameters for the marsh runs
+for key in hold_unscaled_weights:
+    sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
+    fig, ax = plt.subplots()
+    ax.set_title('Distribution of Learned Weight Vectors [Unscaled]: ' + str(key) + " Sites")
+    sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, showmeans=True, palette="Greys")
+    funcs.wrap_labels(ax, 10)
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(
+        key) + "_unscaledWeights_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -591,7 +629,7 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
-sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
+sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, showmeans=True, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot_human.png",
             dpi=500,
@@ -605,12 +643,27 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Certainty in Parameters')
-sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
+sns.boxplot(data=certainty_df, notch=True, showfliers=False, showmeans=True, palette="Blues")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
+
+
+# Plot the distribution of the certainty of parameters for each run
+intercept_df = pd.DataFrame(hold_intercept)
+sns.set_theme(style='white', rc={'figure.dpi': 147},
+              font_scale=0.7)
+fig, ax = plt.subplots()
+ax.set_title('Distribution of Intercepts [Unscaled]:')
+sns.boxplot(data=intercept_df, notch=True, showfliers=False, showmeans=True, palette="coolwarm")
+funcs.wrap_labels(ax, 10)
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\intercepts_nolog_boxplot_human.png",
+            dpi=500,
+            bbox_inches='tight')
+plt.show()
+
 
 # Plot the distribution of the certainty of predictions for each run
 pred_certainty_df = pd.DataFrame(hold_prediction_certainty)
@@ -618,7 +671,7 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
-sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
+sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, showmeans=True, palette="Reds")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\pred_certainty_scaledXY_nolog_boxplot_human.png",
             dpi=500,

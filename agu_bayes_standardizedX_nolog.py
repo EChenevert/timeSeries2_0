@@ -143,12 +143,13 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)',
     'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
     # taking out water level features because they are not super informative
-    # Putting Human in the loop
+    # Putting Human in the loop: delete variables that are not easily interpretable or highly correlated
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    # 'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    # 'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
+    # 'Soil Porewater Temperature (°C)'
+    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
+    'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 

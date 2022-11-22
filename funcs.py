@@ -90,3 +90,27 @@ def backward_elimination(data, target, num_feats=5, significance_level=0.05):
             break
     return features
 
+
+def unscaled_weights_from_full_standardization(X, y, bayesianReg: linear_model):
+    """https://stackoverflow.com/questions/57513372/can-i-inverse-transform-the-intercept-and-coefficients-of-
+    lasso-regression-after"""
+    # First deal with X
+    mean_X = X.mean()  # is a pandas series of means
+    std_X = X.std()
+    X_scaled = ((X - mean_X) / std_X)
+    # Second deal with y: for computing the intercept
+    mean_y = y.median()
+    std_y = y.std()
+
+    a = bayesianReg.coef_
+    coef_new = ((a * (X - mean_X).values) / (X * std_X).values) * float(std_y)
+    coef_new = np.nan_to_num(coef_new)[0]  # need this cuz some values of X will be zero; [0] just takes first arr
+
+    b = bayesianReg.intercept_
+    # The intercept is expected accretion when all Xs are 0: so ideal this is zero or close to zero.
+    # If not we mising some process
+    intercept_new = b * float(std_y) + float(mean_y)
+
+    return coef_new, intercept_new
+
+# my_predict(X, y, baymod)
