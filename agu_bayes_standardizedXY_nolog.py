@@ -129,7 +129,7 @@ udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soi
 udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
 
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop('Community', axis=1), thres=2.5)
+rdf = funcs.outlierrm(udf.drop('Community', axis=1), thres=2.6)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
 rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
@@ -147,9 +147,9 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    'Soil Porewater Temperature (°C)',
-    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Moisture Content (%)', 'Organic Matter (%)',
+    # 'Soil Porewater Temperature (°C)',
+    # 'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
+    # 'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 # Rename some variables for better text wrapping
@@ -347,7 +347,7 @@ ax.plot(
         #  scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
     [y.min(), y.max()],
     [y.min(), y.max()],
-    "r--", lw=3)
+    "k--", lw=3)
 
 ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
@@ -609,7 +609,7 @@ for key in marshdic:
             #  scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
         [y.min(), y.max()],
         [y.min(), y.max()],
-         "r--", lw=3)
+         "k--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -623,7 +623,8 @@ for key in marshdic:
     ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
+                "_scaledXY_nolog_cv.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -655,6 +656,7 @@ for key in hold_unscaled_weights:
     sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
     fig, ax = plt.subplots()
     ax.set_title('Distribution of Learned Weight Vectors [Unscaled]: ' + str(key) + " Sites")
+    ax.axhline(0, ls='--')
     sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(
@@ -682,7 +684,7 @@ certainty_df = pd.DataFrame(hold_marsh_weight_certainty)
 sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
-ax.set_title('Distribution of Bayesian Certainty in Parameters')
+ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot.png",
@@ -691,12 +693,13 @@ fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certaint
 plt.show()
 
 
-# Plot the distribution of the certainty of parameters for each run
+# Plot the distribution calcualted intercepts
 intercept_df = pd.DataFrame(hold_intercept)
 sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Intercepts [Unscaled]:')
+ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\intercepts_nolog_boxplot.png",
