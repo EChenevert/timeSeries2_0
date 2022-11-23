@@ -126,10 +126,10 @@ udf['land_lost_km2'] = udf['Land_Lost_m2']*0.000001  # convert to km2
 udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soil Specific Conductance (uS/cm)',
                 'Soil Porewater Specific Conductance (uS/cm)',
                 'Land_Lost_m2'], axis=1)
-udf = udf.rename(columns={'tss_med': 'tss_med_mg/l'})
+udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
 
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop('Community', axis=1), thres=3)
+rdf = funcs.outlierrm(udf.drop('Community', axis=1), thres=2.5)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
 rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
@@ -147,10 +147,23 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
+    'Soil Porewater Temperature (°C)',
     'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Porewater Temperature (°C)', 'Soil Moisture Content (%)', 'Organic Matter (%)',
+    'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
+# Rename some variables for better text wrapping
+rdf = rdf.rename(columns={
+    'Tide_Amp (ft)': 'Tide Amp (ft)',
+    'avg_percentflooded (%)': ' avg percent flooded (%)',
+    'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
+    'log_distance_to_water_km': 'log distance to water km',
+    'log_distance_to_river_km': 'log distance to river km',
+    '10%thLower_flooding (ft)': '10%thLower flooding (ft)',
+    '90%thUpper_flooding (ft)': '90%thUpper flooding (ft)',
+    'avg_flooding (ft)': 'avg flooding (ft)',
+    'std_deviation_avg_flooding (ft)': 'std dev avg flooding (ft)'
+})
 
 # Now for actual feature selection yay!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Make Dataset
@@ -188,7 +201,7 @@ bestfeatures = funcs.backward_elimination(predictors_scaled, target_scaled.value
 
 X, y = predictors_scaled[bestfeatures], target_scaled
 
-baymod = linear_model.BayesianRidge(fit_intercept=True)  #.LinearRegression()  #Lasso(alpha=0.1)
+baymod = linear_model.BayesianRidge(fit_intercept=False)  #.LinearRegression()  #Lasso(alpha=0.1)
 
 predicted = []
 y_ls = []
@@ -243,7 +256,7 @@ for i in range(100):  # for 100 repeates
         intercept_ls.append(intercept)
         # Collect scaled parameters
         weights = baymod.coef_
-        weight_vector_ls.append(weights)
+        weight_vector_ls.append(abs(weights))  # Take the absolute values of weights for relative feature importance
         regularizor = baymod.lambda_ / baymod.alpha_
         regularizor_ls.append(regularizor)
         eigs = np.linalg.eigh(baymod.sigma_)
@@ -316,15 +329,25 @@ mae_inv_final_mean = np.mean(mae_inv_total_means)
 mae_inv_final_median = np.median(mae_inv_total_medians)
 
 fig, ax = plt.subplots(figsize=(6, 4))
-hb = ax.hexbin(x=y_ls, y=predicted,
+hb = ax.hexbin(  # x=scalar_ywhole.inverse_transform(np.asarray(y_ls).reshape(-1, 1)),
+                 # y=scalar_ywhole.inverse_transform(np.asarray(predicted).reshape(-1, 1)),
+               x=y_ls,
+               y=predicted,
                gridsize=30, edgecolors='grey',
-               cmap='YlOrRd', mincnt=1)
+               cmap='YlGnBu', mincnt=1)
 ax.set_facecolor('white')
 ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
 ax.set_title("All Sites: 100x Repeated 3-fold CV")
 cb = fig.colorbar(hb, ax=ax)
-ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
+ax.plot(
+        # [scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
+        #  scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
+        # [scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
+        #  scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
+    [y.min(), y.max()],
+    [y.min(), y.max()],
+    "r--", lw=3)
 
 ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
@@ -338,7 +361,7 @@ ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy
 ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv_human.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -395,7 +418,7 @@ for key in marshdic:
 
     X, y = predictors_scaled[bestfeaturesM], target_scaled
 
-    baymod = linear_model.BayesianRidge(fit_intercept=True)
+    baymod = linear_model.BayesianRidge(fit_intercept=False)
 
     # # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     # rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
@@ -494,7 +517,7 @@ for key in marshdic:
             intercept_ls.append(y_intercept)
             # Collect scaled parameters
             weights = baymod.coef_
-            weight_vector_ls.append(weights)
+            weight_vector_ls.append(abs(weights))  # Take the absolute values of weights for relative feature importance
             regularizor = baymod.lambda_ / baymod.alpha_
             regularizor_ls.append(regularizor)
             eigs = np.linalg.eigh(baymod.sigma_)
@@ -568,15 +591,25 @@ for key in marshdic:
     mae_inv_final_median = np.median(mae_inv_total_medians)
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    hb = ax.hexbin(x=y_ls, y=predicted,
+    hb = ax.hexbin(  # x=scalar_ymarsh.inverse_transform(np.asarray(y_ls).reshape(-1, 1)),
+                     # y=scalar_ymarsh.inverse_transform(np.asarray(predicted).reshape(-1, 1)),
+                   x=y_ls,
+                   y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlOrRd', mincnt=1)
+                   cmap='YlGnBu', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
     ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
     cb = fig.colorbar(hb, ax=ax)
-    ax.plot([y.min(), y.max()], [y.min(), y.max()], "r--", lw=3)
+    ax.plot(
+            # [scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
+            #  scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
+            # [scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
+            #  scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
+        [y.min(), y.max()],
+        [y.min(), y.max()],
+         "r--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -590,22 +623,29 @@ for key in marshdic:
     ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) + "_scaledXY_nolog_cv.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
 
 
 
-# Plot the distribution of weight parameters for the marsh runs
+# Plot the distribution of scaled weight parameters for the marsh runs
 for key in hold_marsh_weights:
     sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
     fig, ax = plt.subplots()
     ax.set_title('Distribution of Learned Weight Vectors [Scaled]: ' + str(key) + " Sites")
-    sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
+    # sns.barplot(data=hold_marsh_weights[key], palette="Greys")
+    sns.barplot(
+        data=hold_marsh_weights[key],
+        # y = hold_marsh_weights[key].keys(),
+        # x = hold_marsh_weights[key].count(),
+        capsize=.4, errcolor=".5",
+        linewidth=3, edgecolor=".5", facecolor=(0, 0, 0, 0),
+    )
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
-                "_scaledXY_nolog_boxplot_human.png",
+                "_scaledXY_nolog_boxplot.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -615,10 +655,10 @@ for key in hold_unscaled_weights:
     sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
     fig, ax = plt.subplots()
     ax.set_title('Distribution of Learned Weight Vectors [Unscaled]: ' + str(key) + " Sites")
-    sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, showmeans=True, palette="Greys")
+    sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(
-        key) + "_unscaledWeights_nolog_boxplot_human.png",
+        key) + "_unscaledWeights_nolog_boxplot.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -629,9 +669,9 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
-sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, showmeans=True, palette="YlOrBr")
+sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -643,9 +683,9 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Certainty in Parameters')
-sns.boxplot(data=certainty_df, notch=True, showfliers=False, showmeans=True, palette="Blues")
+sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -657,9 +697,9 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Intercepts [Unscaled]:')
-sns.boxplot(data=intercept_df, notch=True, showfliers=False, showmeans=True, palette="coolwarm")
+sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\intercepts_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\intercepts_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -671,9 +711,9 @@ sns.set_theme(style='white', rc={'figure.dpi': 147},
               font_scale=0.7)
 fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
-sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, showmeans=True, palette="Reds")
+sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\pred_certainty_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\pred_certainty_scaledXY_nolog_boxplot.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()

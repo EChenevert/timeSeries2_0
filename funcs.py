@@ -5,6 +5,7 @@ from sklearn.utils import shuffle
 import random
 import statsmodels.api as sm
 from sklearn import linear_model
+import textwrap
 
 
 def outlierrm(df, thres=3):
@@ -31,35 +32,6 @@ def outlierrm(df, thres=3):
     return df
 
 
-# def kfold_split(dataset: pd.DataFrame, num_folds: int):
-#     """
-#     Will split the daatset into kfolds
-#     """
-#     foldsize = int(len(dataset)/num_folds)
-#     # Just split the SHUFFLED df in order
-#     phi_ls = []
-#     for i in range(num_folds):
-#         phi_ls.append(dataset.iloc[foldsize*i:foldsize*i + foldsize, :])
-#     return phi_ls
-#
-#
-# def repeated_fivefold_cross_validation(dataset: pd.DataFrame, num_folds: int, repeats: int,
-#                                        model: linear_model.BayesianRidge, target_column: str):
-#     """
-#     """
-#     for i in range(repeats):
-#         shuff_df = shuffle(dataset)
-#         target = shuff_df[target_column]
-#         target_ls = kfold_split(target, num_folds)
-#         fold_ls = kfold_split(shuff_df, num_folds)
-#         # Model Training
-#         for j in range(len(fold_ls)-1):
-#             phifold = fold_ls[j]
-#
-#             model.fit()
-
-
-import textwrap
 def wrap_labels(ax, width, break_long_words=False):
     """
     https://medium.com/dunder-data/automatically-wrap-graph-labels-in-matplotlib-and-seaborn-a48740bc9ce
