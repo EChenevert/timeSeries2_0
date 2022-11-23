@@ -156,7 +156,12 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 # Make Dataset
 target = rdf[outcome].reset_index().drop('index', axis=1)
 predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
-#### Scale: Because this way I can extract feature importances
+#### Center to reduce multicollinearity: Because this way I can extract feature importances
+from sklearn.preprocessing import StandardScaler
+scalar_Xwhole = StandardScaler(with_std=False)
+scalar_ywhole = StandardScaler(with_std=False)
+predictors= pd.DataFrame(scalar_Xwhole.fit_transform(predictors), columns=predictors.columns.values)
+target = pd.DataFrame(scalar_ywhole.fit_transform(target), columns=[outcome])
 
 # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
 # br = linear_model.BayesianRidge(fit_intercept=False)

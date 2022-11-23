@@ -154,7 +154,7 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 
 # Now for actual feature selection yay!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Make Dataset
-target = rdf[outcome].reset_index().drop('index', axis=1)
+target = np.log(rdf[outcome].reset_index().drop('index', axis=1))
 predictors = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
 #### Scale: Because this way I can extract feature importances
 
@@ -327,7 +327,7 @@ for key in marshdic:
     print(key)
     mdf = marshdic[key]  # .drop('Community', axis=1)
     # It is preshuffled so i do not think ordering will be a problem
-    target = mdf[outcome].reset_index().drop('index', axis=1)
+    target = np.log(mdf[outcome].reset_index().drop('index', axis=1))
     predictors = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
 
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
