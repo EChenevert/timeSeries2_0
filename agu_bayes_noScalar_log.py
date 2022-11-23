@@ -1,4 +1,4 @@
-from mlxtend.feature_selection import ExhaustiveFeatureSelector
+
 from sklearn import linear_model
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score, mean_absolute_error
@@ -307,7 +307,7 @@ ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoor
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
 
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_nolog\\all_sites_nolog_cv_human.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_log\\all_sites_log_cv_human.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -528,7 +528,7 @@ for key in marshdic:
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
 
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_nolog\\" + str(key) + "_nolog_cv_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_log\\" + str(key) + "_log_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -542,7 +542,7 @@ for key in hold_marsh_weights:
     ax.set_title('Distribution of Learned Weight Vectors: ' + str(key) + " Sites")
     sns.boxplot(data=hold_marsh_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_nolog\\" + str(key) + "_nolog_boxplot_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_log\\" + str(key) + "_log_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -555,7 +555,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_nolog\\regularization_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_log\\regularization_log_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -569,7 +569,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Certainty in Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_nolog\\certainty_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_log\\certainty_log_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -582,7 +582,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_nolog\\pred_certainty_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\noScalar_log\\pred_certainty_log_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
