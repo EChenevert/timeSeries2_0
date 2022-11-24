@@ -64,7 +64,7 @@ tdf = df.dropna(thresh=df.shape[0]*0.5, how='all', axis=1)
 udf = tdf.drop([
     'Year (yyyy)', 'Accretion Measurement 1 (mm)', 'Year',
     'Accretion Measurement 2 (mm)', 'Accretion Measurement 3 (mm)',
-    'Accretion Measurement 4 (mm)', 'Longitude', 'Basins',
+    'Accretion Measurement 4 (mm)',
     'Month (mm)', 'Average Accretion (mm)', 'Delta time (days)', 'Wet Volume (cm3)',
     'Delta Time (decimal_years)', 'Wet Soil pH (pH units)', 'Dry Soil pH (pH units)', 'Dry Volume (cm3)',
     'Measurement Depth (ft)', 'Plot Size (m2)', '% Cover Shrub', '% Cover Carpet', 'Direction (Collar Number)',
@@ -91,7 +91,7 @@ if vertical == 'Accretion Rate (mm/yr)':
     udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26) * -1
     udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf[
         'SLR (mm/yr)']
-    udf = udf.drop(['SLR (mm/yr)', 'Latitude'],
+    udf = udf.drop(['SLR (mm/yr)'],
                    axis=1)  # obviously drop because it is the same everywhere ; only used for calc
 
 elif vertical == 'Acc_rate_fullterm (cm/y)':
@@ -107,7 +107,7 @@ elif vertical == 'Acc_rate_fullterm (cm/y)':
     udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26) * -1
     udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf[
         'SLR (mm/yr)']*0.1
-    udf = udf.drop(['SLR (mm/yr)', 'Latitude'],
+    udf = udf.drop(['SLR (mm/yr)'],
                    axis=1)  # obviously drop because it is the same everywhere ; only used for calc
 else:
     print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
@@ -129,27 +129,28 @@ udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soi
 udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
 
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop('Community', axis=1), thres=2.6)
+rdf = funcs.outlierrm(udf.drop(['Community', 'Basins'], axis=1), thres=2.6)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
-rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
-rdf['log_river_width_mean_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['river_width_mean_km']]
-rdf['log_distance_to_river_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_river_km']]
+# rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
+# rdf['log_river_width_mean_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['river_width_mean_km']]
+# rdf['log_distance_to_river_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_river_km']]
 # drop the old features
-rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mean_km'], axis=1)
+# rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mean_km'], axis=1)
+
 # Now it is feature selection time
 # drop any variables related to the outcome
 rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Surface Elevation Change Rate (cm/y)', 'Deep Subsidence Rate (mm/yr)', 'RSLR (mm/yr)', 'SEC Rate (mm/yr)',
-    'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
+    # 'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
     # taking out water level features because they are not super informative
     # Putting Human in the loop
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)', 'Soil Salinity (ppt)',
-    'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    'Soil Porewater Temperature (°C)',
-    'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Moisture Content (%)', 'Organic Matter (%)',
+    # 'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
+    # 'Soil Porewater Temperature (°C)',
+    # 'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
+    # 'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 # Rename some variables for better text wrapping
@@ -166,7 +167,8 @@ rdf = rdf.rename(columns={
 })
 
 # Will be using gdf because we can look into specific marsh subsets
-gdf = pd.concat([rdf, udf['Community']], axis=1, join='inner')
+gdf = pd.concat([rdf, udf[['Community', 'Basins']]], axis=1, join='inner')
+gdf.drop(gdf.index[gdf['Community'] == 'Swamp'], inplace=True)
 # Export gdf to file specifically for AGU data and results
 # split into marsh datasets
 
@@ -181,7 +183,61 @@ marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Interm
 # EDA All Sites
 # Extract the highlighted variables
 # data = gdf['Bulk']
-sns.pairplot(gdf, hue='Community')
+# sns.pairplot(gdf, hue='Community')
+# plt.show()
+
+
+# 1st: What is the difference in the organic and mineral mass fractions
+A = 10000  # This is the area of the study, in our case it is per site, so lets say the area is 1 m2 in cm
+gdf['Average_Ac_cm_yr'] = gdf['Accretion Rate (mm/yr)'] * 0.10
+gdf['Total Mass Accumulation (g/yr)'] = (gdf['Bulk Density (g/cm3)'] * gdf['Average_Ac_cm_yr']) * A  # g/cm3 * cm/yr * cm2 = g/yr
+gdf['Organic Mass Accumulation (g/yr)'] = (gdf['Bulk Density (g/cm3)'] * gdf['Average_Ac_cm_yr'] *
+                                           (gdf['Organic Matter (%)']/100)) * A
+gdf['Mineral Mass Accumulation (g/yr)'] = gdf['Total Mass Accumulation (g/yr)'] - gdf['Organic Mass Accumulation (g/yr)']
+
+# plt.figure()
+# plt.title('Organic Mass Accumulation Across Marsh Types')
+# sns.violinplot(data=gdf, x='Community', y='Organic Mass Accumulation (g/yr)')
+# plt.show()
+#
+# plt.figure()
+# plt.title('Mineral Mass Accumulation Across Marsh Types')
+# sns.violinplot(data=gdf, x='Community', y='Mineral Mass Accumulation (g/yr)')
+# plt.show()
+# # No real significance difference in the trends...
+
+# Maybe plot those weird plots of organic and mineral mass accumulation versus vertical accretion
+
+plt.figure()
+plt.title('Organic Fraction Marsh Types')
+sns.violinplot(data=gdf, x='Community', y='Organic Matter (%)')
+plt.show()
+# I guess the one significant thing here is that saline marsh has a lower organic fraction...
+
+
+# 2st: Focusing on accretion and subsidence
+# Make keep binary var to define highly organic from mineral soils
+# Make a binary of peat or not
+gdf['Mineral or Peat'] = ['Peat' if val > 30 else 'Mineral' for val in gdf['Organic Matter (%)']]
+
+plt.figure()
+plt.title('Vertical Accretion Across Marsh Types')
+sns.violinplot(data=gdf, x='Community', y='Accretion Rate (mm/yr)', hue='Mineral or Peat')
+plt.show()
+
+plt.figure()
+plt.title('Shallow Subsidence Across Marsh Types')
+sns.violinplot(data=gdf, x='Community', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat')
+plt.show()
+
+# Lets check out the relationship between subsidence and accretion: Definetly a positive relationship here
+plt.figure()
+sns.scatterplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat')
+plt.show()
+# Lets check the realtionship between accretion and distance to the river
+g = sns.FacetGrid(gdf, col="Community", hue="Basins")
+g.map(sns.scatterplot, "distance_to_river_km", "Accretion Rate (mm/yr)", alpha=.7)
+g.add_legend()
 plt.show()
 
 
