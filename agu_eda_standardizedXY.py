@@ -232,12 +232,54 @@ plt.show()
 
 # Lets check out the relationship between subsidence and accretion: Definetly a positive relationship here
 plt.figure()
-sns.scatterplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat')
+sns.jointplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat')
 plt.show()
 # Lets check the realtionship between accretion and distance to the river
 g = sns.FacetGrid(gdf, col="Community", hue="Basins")
 g.map(sns.scatterplot, "distance_to_river_km", "Accretion Rate (mm/yr)", alpha=.7)
 g.add_legend()
+plt.show()
+
+
+f = plt.figure(figsize=(7, 5))
+ax = f.add_subplot(1, 1, 1)
+sns.histplot(data=gdf, ax=ax, stat="count", multiple="stack",
+             x="Accretion Rate (mm/yr)", kde=False,
+             palette="pastel", hue="Community",
+             element="bars", legend=True)
+ax.set_title("Seaborn Stacked Histogram")
+ax.set_xlabel("Accretion Rate (mm/yr)")
+ax.set_ylabel("Count")
+plt.show()
+
+# Maybe the source of increased accretion in terrebonne is due to reworking from land lost
+plt.figure()
+sns.pairplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')][['Accretion Rate (mm/yr)',
+                                                                                         'land_lost_km2',
+                                                                                         'distance_to_water_km',
+                                                                                         'Average Marsh Elevation (ft. NAVD88)',
+                                                                                         'windspeed', 'Tide Amp (ft)',
+                                                                                         'Soil Porewater Temperature (°C)',
+                                                                                         '90%thUpper flooding (ft)',
+                                                                                         'tss med mg/l', 'NDVI']])
+plt.show()
+# Looks like it could be due to the increase in windspeed, 90% flooding, and soil porewater temperature (??),
+# cuz marsh elevation is negatively correlated to accretion here!
+
+plt.figure()
+sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='90%thUpper flooding (ft)',
+                y='Accretion Rate (mm/yr)')
+plt.title('Investigatin Controls on Accretion in Terrebonne Basin'); plt.show()
+
+plt.figure()
+sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='windspeed',
+                y='Accretion Rate (mm/yr)')
+plt.title('Investigatin Controls on Accretion in Terrebonne Basin'); plt.show()
+
+# Lets investigate NDVI: particularly for freshwater and saline marshes since they got opposite effects
+plt.figure()
+sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='NDVI', y='Accretion Rate (mm/yr)', hue='Community')
 plt.show()
 
 

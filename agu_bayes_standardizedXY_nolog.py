@@ -52,10 +52,12 @@ distRiver = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv",
 nearWater = pd.read_csv(r"D:\Etienne\fall2022\agu_data\ALLDATA2.csv", encoding="unicode_escape")[
     ['Simple site', 'Distance_to_Water_m']
 ].set_index('Simple site')
-
+floodfreq = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\floodFrequencySitePerYear.csv", encoding="unicode_escape")[[
+    'Simple site', 'Flood Freq (Floods/yr)'
+]].set_index('Simple site')
 
 # Concatenate
-df = pd.concat([bysite, distRiver, nearWater, gee, jrc, marshElev, wl, perc, SEC, acc], axis=1, join='outer')
+df = pd.concat([bysite, distRiver, nearWater, gee, jrc, marshElev, wl, perc, SEC, acc, floodfreq], axis=1, join='outer')
 
 # Now clean the columns
 # First delete columns that are more than 1/2 nans
@@ -193,15 +195,14 @@ target_scaled = pd.DataFrame(scalar_ywhole.fit_transform(t), columns=[outcome])
 #
 # bestfeatures = list(efsmlr.best_feature_names_)
 
-bestfeatures = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel())
+bestfeatures = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=6)
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
-# first split data set into test train
 
 X, y = predictors_scaled[bestfeatures], target_scaled
 
-baymod = linear_model.BayesianRidge(fit_intercept=False)  #.LinearRegression()  #Lasso(alpha=0.1)
+baymod = linear_model.BayesianRidge(fit_intercept=False)
 
 predicted = []
 y_ls = []
@@ -408,7 +409,7 @@ for key in marshdic:
     #     #
     #     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=10,
+    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=6,
                                                significance_level=0.05)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
@@ -648,7 +649,6 @@ for key in logdfs:
     predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
     target_scaled = pd.DataFrame(scalar_ymarsh.fit_transform(t), columns=[outcome])
     # Rename Key for naming purposes
-    # key = key + "_log(y)"
     print(key)
 
     # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
@@ -671,7 +671,7 @@ for key in logdfs:
     #     #
     #     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=10,
+    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=6,
                                                significance_level=0.05)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
@@ -773,9 +773,12 @@ for key in logdfs:
             y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
-            # Collect the unscaled parameters
+            # Collect the unscaled parameters: first unscale then log transform
             un_scaled_weights, y_intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeaturesM],
                                                                                               t, baymod)
+            # log transform
+            un_scaled_weights = funcs.log_transform_weights(un_scaled_weights)
+
             unscaled_w_ls.append(un_scaled_weights)
             intercept_ls.append(y_intercept)
             # Collect scaled parameters

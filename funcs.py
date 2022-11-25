@@ -96,4 +96,15 @@ def unscaled_weights_from_full_standardization(X, y, bayesianReg: linear_model):
 
     return coefs_new, intercept
 
-# unscaled_weights_from_full_standardization(X, y, baymod)
+def log_transform_weights(coefs):
+    exp_coefs = np.exp(coefs)
+    print(" exponential ", exp_coefs)
+    minus_coefs = exp_coefs - 1
+    # minus_coefs = [i - 1 for i in exp_coefs]
+    print("Minus 1: ", minus_coefs)
+    new_coefs = minus_coefs * 100
+    print(" multiply 100: ", new_coefs)
+    return new_coefs
+
+# log_transform_weights(unscaled_weights)
+
