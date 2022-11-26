@@ -66,7 +66,7 @@ tdf = df.dropna(thresh=df.shape[0]*0.5, how='all', axis=1)
 udf = tdf.drop([
     'Year (yyyy)', 'Accretion Measurement 1 (mm)', 'Year',
     'Accretion Measurement 2 (mm)', 'Accretion Measurement 3 (mm)',
-    'Accretion Measurement 4 (mm)', 'Longitude', 'Basins',
+    'Accretion Measurement 4 (mm)',
     'Month (mm)', 'Average Accretion (mm)', 'Delta time (days)', 'Wet Volume (cm3)',
     'Delta Time (decimal_years)', 'Wet Soil pH (pH units)', 'Dry Soil pH (pH units)', 'Dry Volume (cm3)',
     'Measurement Depth (ft)', 'Plot Size (m2)', '% Cover Shrub', '% Cover Carpet', 'Direction (Collar Number)',
@@ -93,7 +93,7 @@ if vertical == 'Accretion Rate (mm/yr)':
     udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26) * -1
     udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf[
         'SLR (mm/yr)']
-    udf = udf.drop(['SLR (mm/yr)', 'Latitude'],
+    udf = udf.drop(['SLR (mm/yr)'],
                    axis=1)  # obviously drop because it is the same everywhere ; only used for calc
 
 elif vertical == 'Acc_rate_fullterm (cm/y)':
@@ -109,7 +109,7 @@ elif vertical == 'Acc_rate_fullterm (cm/y)':
     udf['Deep Subsidence Rate (mm/yr)'] = ((3.7147 * udf['Latitude']) - 114.26) * -1
     udf['RSLR (mm/yr)'] = udf['Shallow Subsidence Rate (mm/yr)'] + udf['Deep Subsidence Rate (mm/yr)'] + udf[
         'SLR (mm/yr)']*0.1
-    udf = udf.drop(['SLR (mm/yr)', 'Latitude'],
+    udf = udf.drop(['SLR (mm/yr)'],
                    axis=1)  # obviously drop because it is the same everywhere ; only used for calc
 else:
     print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
@@ -130,8 +130,12 @@ udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soi
                 'Land_Lost_m2'], axis=1)
 udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
 
+# Delete the swamp sites and unammed basin
+udf.drop(udf.index[udf['Community'] == 'Swamp'], inplace=True)
+# udf.drop(udf.index[udf['Basins'] == 'Unammed_basin'], inplace=True)
+udf = udf.drop('Basins', axis=1)
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop('Community', axis=1), thres=2.6)
+rdf = funcs.outlierrm(udf.drop(['Community', 'Latitude', 'Longitude'], axis=1), thres=2.6)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
 rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
@@ -166,6 +170,7 @@ rdf = rdf.rename(columns={
     'avg_flooding (ft)': 'avg flooding (ft)',
     'std_deviation_avg_flooding (ft)': 'std dev avg flooding (ft)'
 })
+
 
 # Now for actual feature selection yay!!!!!!!!!!!!!!!!!!!!!!!!!!
 # Make Dataset
@@ -366,7 +371,7 @@ fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_site
             bbox_inches='tight')
 plt.show()
 
-gdf = pd.concat([rdf, udf['Community']], axis=1, join='inner')
+gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude']]], axis=1, join='inner')
 # Export gdf to file specifically for AGU data and results
 gdf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv")
 # split into marsh datasets
@@ -385,7 +390,7 @@ for key in marshdic:
     mdf = marshdic[key]  # .drop('Community', axis=1)
     # It is preshuffled so i do not think ordering will be a problem
     t = mdf[outcome].reset_index().drop('index', axis=1)
-    phi = mdf.drop([outcome, 'Community'], axis=1).reset_index().drop('index', axis=1)
+    phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude'], axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
     scalar_Xmarsh = StandardScaler()
     scalar_ymarsh = StandardScaler()
@@ -637,7 +642,7 @@ for key in marshdic:
 
 
 ### Add the Log Saline and Freshwater Marshes..... [this code will likely be clumsy]
-logdfs = {'Freshwater log(y)': marshdic['Freshwater'].drop('Community', axis=1),
+logdfs = {'Freshwater log(y)': marshdic['Freshwater'].drop(['Community', 'Latitude', 'Longitude'], axis=1),
           # 'Intermediate log(y)': marshdic['Intermediate'].drop('Community', axis=1),
           'All log(y)': rdf}
 for key in logdfs:
