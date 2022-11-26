@@ -169,6 +169,8 @@ rdf = rdf.rename(columns={
 # Will be using gdf because we can look into specific marsh subsets
 gdf = pd.concat([rdf, udf[['Community', 'Basins']]], axis=1, join='inner')
 gdf.drop(gdf.index[gdf['Community'] == 'Swamp'], inplace=True)
+# drop unamed basin
+gdf.drop(gdf.index[gdf['Basins'] == 'Unammed_basin'], inplace=True)
 # Export gdf to file specifically for AGU data and results
 # split into marsh datasets
 
@@ -183,8 +185,15 @@ marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Interm
 # EDA All Sites
 # Extract the highlighted variables
 # data = gdf['Bulk']
-# sns.pairplot(gdf, hue='Community')
-# plt.show()
+pp = sns.pairplot(gdf[[
+        'Latitude', 'Longitude', 'Accretion Rate (mm/yr)', 'Bulk Density (g/cm3)',
+       'Organic Matter (%)', 'Soil Porewater Temperature (°C)', 'Soil Porewater Salinity (ppt)',
+       'Average Height Herb (cm)', 'NDVI',
+       'Tide Amp (ft)', 'avg flooding (ft)', '90%thUpper flooding (ft)', 'std dev avg flooding (ft)',
+       'land_lost_km2', 'Community'
+]], hue='Community')
+pp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allvars.png")
+plt.show()
 
 
 # 1st: What is the difference in the organic and mineral mass fractions
@@ -194,6 +203,7 @@ gdf['Total Mass Accumulation (g/yr)'] = (gdf['Bulk Density (g/cm3)'] * gdf['Aver
 gdf['Organic Mass Accumulation (g/yr)'] = (gdf['Bulk Density (g/cm3)'] * gdf['Average_Ac_cm_yr'] *
                                            (gdf['Organic Matter (%)']/100)) * A
 gdf['Mineral Mass Accumulation (g/yr)'] = gdf['Total Mass Accumulation (g/yr)'] - gdf['Organic Mass Accumulation (g/yr)']
+
 
 # plt.figure()
 # plt.title('Organic Mass Accumulation Across Marsh Types')
@@ -208,9 +218,21 @@ gdf['Mineral Mass Accumulation (g/yr)'] = gdf['Total Mass Accumulation (g/yr)'] 
 
 # Maybe plot those weird plots of organic and mineral mass accumulation versus vertical accretion
 
+f, axes = plt.subplots(1, 2, sharex=True, sharey=True)
+sns.boxplot(y='Mineral Mass Accumulation (g/yr)', x='Community', data=gdf,  orient='v', ax=axes[0], showfliers=False,
+               palette='viridis')
+sns.boxplot(y='Organic Mass Accumulation (g/yr)', x='Community', data=gdf,  orient='v', ax=axes[1], showfliers=False,
+            palette='viridis')
+axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
+axes[1].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
+plt.show()
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\mineral_v_organic_mass.png")
+
 plt.figure()
 plt.title('Organic Fraction Marsh Types')
-sns.violinplot(data=gdf, x='Community', y='Organic Matter (%)')
+orgviolin = sns.violinplot(data=gdf, x='Community', y='Organic Matter (%)', palette="viridis")
+fig = orgviolin.get_figure()
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\organicFrac.png")
 plt.show()
 # I guess the one significant thing here is that saline marsh has a lower organic fraction...
 
@@ -218,38 +240,44 @@ plt.show()
 # 2st: Focusing on accretion and subsidence
 # Make keep binary var to define highly organic from mineral soils
 # Make a binary of peat or not
-gdf['Mineral or Peat'] = ['Peat' if val > 30 else 'Mineral' for val in gdf['Organic Matter (%)']]
+gdf['Mineral or Peat'] = ['Peat' if val > 30 else 'Mineral' for val in gdf['Organic Matter (%)']]  # common threshold for peat... site
 
-plt.figure()
-plt.title('Vertical Accretion Across Marsh Types')
-sns.violinplot(data=gdf, x='Community', y='Accretion Rate (mm/yr)', hue='Mineral or Peat')
+f, axes = plt.subplots(1, 2, sharex=True, sharey=True)
+sns.boxplot(y='Accretion Rate (mm/yr)', x='Community', data=gdf,  orient='v', ax=axes[0], showfliers=False,
+               hue='Mineral or Peat', # split=True,
+               palette="viridis")
+sns.boxplot(y='Shallow Subsidence Rate (mm/yr)', x='Community', data=gdf,  orient='v', ax=axes[1], showfliers=False,
+               hue='Mineral or Peat', # split=True,
+               palette="viridis")
+axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
+axes[1].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
 plt.show()
-
-plt.figure()
-plt.title('Shallow Subsidence Across Marsh Types')
-sns.violinplot(data=gdf, x='Community', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat')
-plt.show()
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_perCommunity.png")
 
 # Lets check out the relationship between subsidence and accretion: Definetly a positive relationship here
 plt.figure()
-sns.jointplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat')
+jp = sns.jointplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat',
+                   palette='rocket')
 plt.show()
+jp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_jp.png")
 # Lets check the realtionship between accretion and distance to the river
 g = sns.FacetGrid(gdf, col="Community", hue="Basins")
 g.map(sns.scatterplot, "distance_to_river_km", "Accretion Rate (mm/yr)", alpha=.7)
 g.add_legend()
 plt.show()
+g.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\distance_from_river_plots.png")
 
 
 f = plt.figure(figsize=(7, 5))
 ax = f.add_subplot(1, 1, 1)
 sns.histplot(data=gdf, ax=ax, stat="count", multiple="stack",
              x="Accretion Rate (mm/yr)", kde=False,
-             palette="pastel", hue="Community",
+             hue="Community", #palette="pastel",
              element="bars", legend=True)
 ax.set_title("Seaborn Stacked Histogram")
 ax.set_xlabel("Accretion Rate (mm/yr)")
 ax.set_ylabel("Count")
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\stacked_accretion.png")
 plt.show()
 
 # Maybe the source of increased accretion in terrebonne is due to reworking from land lost
@@ -267,19 +295,27 @@ plt.show()
 # cuz marsh elevation is negatively correlated to accretion here!
 
 plt.figure()
-sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='90%thUpper flooding (ft)',
-                y='Accretion Rate (mm/yr)')
-plt.title('Investigatin Controls on Accretion in Terrebonne Basin'); plt.show()
+fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='90%thUpper flooding (ft)',
+                      y='Accretion Rate (mm/yr)', palette='rocket')
+plt.title('Investigating Controls on Accretion in Terrebonne Basin')
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_flooding.png")
+plt.show()
 
 plt.figure()
-sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='windspeed',
+fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='windspeed',
                 y='Accretion Rate (mm/yr)')
-plt.title('Investigatin Controls on Accretion in Terrebonne Basin'); plt.show()
+plt.title('Investigatin Controls on Accretion in Terrebonne Basin')
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_winspeed.png")
+plt.show()
 
 # Lets investigate NDVI: particularly for freshwater and saline marshes since they got opposite effects
 plt.figure()
-sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
-                x='NDVI', y='Accretion Rate (mm/yr)', hue='Community')
+jpndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='NDVI', y='Accretion Rate (mm/yr)', hue='Community', palette="rocket")
+jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ndvi_freshandsal.png")
 plt.show()
 
+# plt.figure()
+# sns.jointplot(data=gdf, x='NDVI', y='Accretion Rate (mm/yr)', hue='Community')
+# plt.show()
 
