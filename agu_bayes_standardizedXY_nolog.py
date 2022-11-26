@@ -350,16 +350,16 @@ ax.plot(
     # [y.min(), y.max()],
     "r--", lw=3)
 
-ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
+# ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
+#             bbox=dict(boxstyle='round', fc='w'),
+#             size=8, ha='left', va='top')
+# ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
+#             bbox=dict(boxstyle='round', fc='w'),
+#             size=8, ha='left', va='top')
+ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
-ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
-            bbox=dict(boxstyle='round', fc='w'),
-            size=8, ha='left', va='top')
-ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 175), xycoords='axes points',
-            bbox=dict(boxstyle='round', fc='w'),
-            size=8, ha='left', va='top')
-ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
+ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv_human.png", dpi=500,
@@ -375,8 +375,10 @@ brackdf = gdf[gdf['Community'] == 'Brackish']
 saldf = gdf[gdf['Community'] == 'Saline']
 freshdf = gdf[gdf['Community'] == 'Freshwater']
 interdf = gdf[gdf['Community'] == 'Intermediate']
+combined = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Brackish')]
 # Exclude swamp
-marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf}
+marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
+            'Intermediate and Brackish': combined}
 
 for key in marshdic:
     print(key)
@@ -612,16 +614,16 @@ for key in marshdic:
         # [y.min(), y.max()],
              "r--", lw=3)
 
-    ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
+    # ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    # ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
-                bbox=dict(boxstyle='round', fc='w'),
-                size=8, ha='left', va='top')
-    ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 175), xycoords='axes points',
-                bbox=dict(boxstyle='round', fc='w'),
-                size=8, ha='left', va='top')
-    ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
+    ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
@@ -877,16 +879,16 @@ for key in logdfs:
         # [y.min(), y.max()],
              "r--", lw=3)
 
-    ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
+    # ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    # ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
-                bbox=dict(boxstyle='round', fc='w'),
-                size=8, ha='left', va='top')
-    ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 175), xycoords='axes points',
-                bbox=dict(boxstyle='round', fc='w'),
-                size=8, ha='left', va='top')
-    ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 155), xycoords='axes points',
+    ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +

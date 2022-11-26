@@ -52,10 +52,12 @@ distRiver = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv",
 nearWater = pd.read_csv(r"D:\Etienne\fall2022\agu_data\ALLDATA2.csv", encoding="unicode_escape")[
     ['Simple site', 'Distance_to_Water_m']
 ].set_index('Simple site')
-
+floodfreq = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\floodFrequencySitePerYear.csv", encoding="unicode_escape")[[
+    'Simple site', 'Flood Freq (Floods/yr)'
+]].set_index('Simple site')
 
 # Concatenate
-df = pd.concat([bysite, distRiver, nearWater, gee, jrc, marshElev, wl, perc, SEC, acc], axis=1, join='outer')
+df = pd.concat([bysite, distRiver, nearWater, gee, jrc, marshElev, wl, perc, SEC, acc, floodfreq], axis=1, join='outer')
 
 # Now clean the columns
 # First delete columns that are more than 1/2 nans
@@ -156,7 +158,7 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 # Rename some variables for better text wrapping
 rdf = rdf.rename(columns={
     'Tide_Amp (ft)': 'Tide Amp (ft)',
-    'avg_percentflooded (%)': ' avg percent flooded (%)',
+    'avg_percentflooded (%)': 'avg percent flooded (%)',
     'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
     'log_distance_to_water_km': 'log distance to water km',
     'log_distance_to_river_km': 'log distance to river km',
@@ -185,16 +187,47 @@ marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Interm
 # EDA All Sites
 # Extract the highlighted variables
 # data = gdf['Bulk']
-pp = sns.pairplot(gdf[[
-        'Latitude', 'Longitude', 'Accretion Rate (mm/yr)', 'Bulk Density (g/cm3)',
-       'Organic Matter (%)', 'Soil Porewater Temperature (°C)', 'Soil Porewater Salinity (ppt)',
-       'Average Height Herb (cm)', 'NDVI',
-       'Tide Amp (ft)', 'avg flooding (ft)', '90%thUpper flooding (ft)', 'std dev avg flooding (ft)',
-       'land_lost_km2', 'Community'
-]], hue='Community')
-pp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allvars.png")
-plt.show()
+# pp = sns.pairplot(gdf[[
+#         'Accretion Rate (mm/yr)', # 'Bulk Density (g/cm3)', 'Organic Matter (%)',
+#        'Soil Porewater Temperature (°C)', 'Soil Porewater Salinity (ppt)',
+#        'Average Height Herb (cm)', 'NDVI',
+#        'Tide Amp (ft)', 'avg flooding (ft)', '90%thUpper flooding (ft)', 'std dev avg flooding (ft)',
+#        'land_lost_km2', 'Community'
+# ]], hue='Community')
+# pp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allvars.png")
+# plt.show()
 
+## Doing pariplot for each of selected variables of backward elimination
+# all sites
+pp_all = sns.pairplot(gdf[[ 'Accretion Rate (mm/yr)', 'Soil Porewater Salinity (ppt)', 'Average Height Herb (cm)',
+                            'Average Height Dominant (cm)', 'Tide Amp (ft)', 'avg flooding (ft)',
+                            'Flood Freq (Floods/yr)']])
+pp_all.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allsites.png")
+plt.show()
+# brackish
+pp_brack = sns.pairplot(gdf[gdf['Community'] == 'Brackish'][[ 'Accretion Rate (mm/yr)', 'Soil Porewater Salinity (ppt)', 'Average Height Herb (cm)',
+                            'Average Height Dominant (cm)']])
+pp_brack.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_brack.png")
+plt.show()
+# Freshwater log(y)
+pp_freshlogy = sns.pairplot(gdf[gdf['Community'] == 'Freshwater'][[ 'Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
+                                  'Tide Amp (ft)', 'std dev avg flooding (ft)', 'avg percent flooded (%)']])
+pp_freshlogy.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_freshlogy.png")
+plt.show()
+# Freshwater
+pp_fresh = sns.pairplot(gdf[gdf['Community'] == 'Freshwater'][['Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
+                                  'Tide Amp (ft)', 'std dev avg flooding (ft)', 'avg percent flooded (%)']])
+pp_fresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_fresh.png")
+plt.show()
+# Intermediate
+pp_inter = sns.pairplot(gdf[gdf['Community'] == 'Intermediate'][['Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
+                                  'Tide Amp (ft)', 'std dev avg flooding (ft)', 'Flood Freq (Floods/yr)']])
+pp_inter.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_inter.png")
+plt.show()
+# Saline
+pp_inter = sns.pairplot(gdf[gdf['Community'] == 'Saline'][['Accretion Rate (mm/yr)', 'NDVI']])
+pp_inter.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_inter.png")
+plt.show()
 
 # 1st: What is the difference in the organic and mineral mass fractions
 A = 10000  # This is the area of the study, in our case it is per site, so lets say the area is 1 m2 in cm
@@ -299,6 +332,25 @@ fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community
                       y='Accretion Rate (mm/yr)', palette='rocket')
 plt.title('Investigating Controls on Accretion in Terrebonne Basin')
 plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_flooding.png")
+plt.show()
+
+plt.figure()
+fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='avg flooding (ft)',
+                      y='Accretion Rate (mm/yr)', palette='rocket')
+plt.title('Investigating Controls on Accretion in Terrebonne Basin')
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_avgflooding.png")
+plt.show()
+
+plt.figure()
+fig = sns.jointplot(data=gdf, x='distance_to_water_km', y='Accretion Rate (mm/yr)', palette='rocket', hue='Community')
+# plt.title('Inves')
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_distancewater_joint.png")
+plt.show()
+
+plt.figure()
+fig = sns.jointplot(data=gdf, x='Bulk Density (g/cm3)', y='Accretion Rate (mm/yr)', palette='rocket', hue='Community')
+# plt.title('Inves')
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_bulkDensity_joint.png")
 plt.show()
 
 plt.figure()
