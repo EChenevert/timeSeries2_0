@@ -180,9 +180,7 @@ phi = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
 #### Scale: Because this way I can extract feature importances
 from sklearn.preprocessing import StandardScaler
 scalar_Xwhole = StandardScaler()
-scalar_ywhole = StandardScaler()
 predictors_scaled = pd.DataFrame(scalar_Xwhole.fit_transform(phi), columns=phi.columns.values)
-target_scaled = pd.DataFrame(scalar_ywhole.fit_transform(t), columns=[outcome])
 
 # # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
 # br = linear_model.BayesianRidge(fit_intercept=False)
@@ -201,15 +199,15 @@ target_scaled = pd.DataFrame(scalar_ywhole.fit_transform(t), columns=[outcome])
 #
 # bestfeatures = list(efsmlr.best_feature_names_)
 
-bestfeatures = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=10,
+bestfeatures = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=10,
                                           significance_level=0.05)
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
 #### NOTE: I should do separate tests to determine which split of the data is optimal ######
 
-X, y = predictors_scaled[bestfeatures], target_scaled
+X, y = predictors_scaled[bestfeatures], t
 
-baymod = linear_model.BayesianRidge(fit_intercept=False)
+baymod = linear_model.BayesianRidge(fit_intercept=True)
 
 predicted = []
 y_ls = []
@@ -258,8 +256,7 @@ for i in range(100):  # for 100 repeates
         # Fit the model
         baymod.fit(X_train, y_train.values.ravel())
         # collect unscaled parameters
-        unscaled_weights, intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeatures],
-                                                                                       t, baymod)
+        unscaled_weights, intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeatures], baymod)
         unscaled_w_ls.append(unscaled_weights)
         intercept_ls.append(intercept)
         # Collect scaled parameters
@@ -283,11 +280,9 @@ for i in range(100):  # for 100 repeates
         mae = mean_absolute_error(y_test, ypred)
         mae_ls.append(mae)
         # Metrics for inversed y: particularly for MAE
-        r2_inv = r2_score(scalar_ywhole.inverse_transform(np.asarray(y_test).reshape(-1, 1)),
-                          scalar_ywhole.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
+        r2_inv = r2_score(y_test, ypred)
         r2_inv_ls.append(r2_inv)
-        mae_inv = mean_absolute_error(scalar_ywhole.inverse_transform(np.asarray(y_test).reshape(-1, 1)),
-                                      scalar_ywhole.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
+        mae_inv = mean_absolute_error(y_test, ypred)
         mae_inv_ls.append(mae_inv)
 
     # Average certainty in predictions
@@ -337,10 +332,8 @@ mae_inv_final_mean = np.mean(mae_inv_total_means)
 mae_inv_final_median = np.median(mae_inv_total_medians)
 
 fig, ax = plt.subplots(figsize=(6, 4))
-hb = ax.hexbin(x=scalar_ywhole.inverse_transform(np.asarray(y_ls).reshape(-1, 1)),
-               y=scalar_ywhole.inverse_transform(np.asarray(predicted).reshape(-1, 1)),
-               # x=y_ls,
-               # y=predicted,
+hb = ax.hexbin(x=y_ls,
+               y=predicted,
                gridsize=30, edgecolors='grey',
                cmap='YlOrRd', mincnt=1)
 ax.set_facecolor('white')
@@ -348,28 +341,22 @@ ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
 ax.set_title("All Sites: 100x Repeated 3-fold CV")
 cb = fig.colorbar(hb, ax=ax)
-ax.plot(
-        [scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
-         scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
-        [scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
-         scalar_ywhole.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
-    # [y.min(), y.max()],
-    # [y.min(), y.max()],
+ax.plot([y.min(), y.max()], [y.min(), y.max()],
     "r--", lw=3)
 
-# ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
-#             bbox=dict(boxstyle='round', fc='w'),
-#             size=8, ha='left', va='top')
-# ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
-#             bbox=dict(boxstyle='round', fc='w'),
-#             size=8, ha='left', va='top')
-ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
+ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
-ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
+ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\all_sites_scaledXY_nolog_cv_human.png", dpi=500,
+# ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
+#             bbox=dict(boxstyle='round', fc='w'),
+#             size=8, ha='left', va='top')
+# ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
+#             bbox=dict(boxstyle='round', fc='w'),
+#             size=8, ha='left', va='top')
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\all_sites_scaledX_nolog_cv_human.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -395,9 +382,7 @@ for key in marshdic:
     phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude'], axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
     scalar_Xmarsh = StandardScaler()
-    scalar_ymarsh = StandardScaler()
     predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
-    target_scaled = pd.DataFrame(scalar_ymarsh.fit_transform(t), columns=[outcome])
     # # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
     # mlr = linear_model.LinearRegression()
     # br = linear_model.BayesianRidge(fit_intercept=False)
@@ -418,7 +403,7 @@ for key in marshdic:
     #
     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=6,
+    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=6,
                                                significance_level=0.06)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
@@ -426,9 +411,9 @@ for key in marshdic:
     # first split data set into test train
     from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
 
-    X, y = predictors_scaled[bestfeaturesM], target_scaled
+    X, y = predictors_scaled[bestfeaturesM], t
 
-    baymod = linear_model.BayesianRidge(fit_intercept=False)
+    baymod = linear_model.BayesianRidge(fit_intercept=True)
 
     # # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     # rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
@@ -521,8 +506,7 @@ for key in marshdic:
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
             # Collect the unscaled parameters
-            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeaturesM],
-                                                                                              t, baymod)
+            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeaturesM], baymod)
             unscaled_w_ls.append(un_scaled_weights)
             intercept_ls.append(y_intercept)
             # Collect scaled parameters
@@ -546,11 +530,9 @@ for key in marshdic:
             mae = mean_absolute_error(y_test, ypred)
             mae_ls.append(mae)
             # Metrics for inversed y: particularly for MAE
-            r2_inv = r2_score(scalar_ymarsh.inverse_transform(np.asarray(y_test).reshape(-1, 1)),
-                              scalar_ymarsh.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
+            r2_inv = r2_score(y_test, ypred)
             r2_inv_ls.append(r2_inv)
-            mae_inv = mean_absolute_error(scalar_ymarsh.inverse_transform(np.asarray(y_test).reshape(-1, 1)),
-                                          scalar_ymarsh.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
+            mae_inv = mean_absolute_error(y_test, ypred)
             mae_inv_ls.append(mae_inv)
 
         # Average certainty
@@ -601,10 +583,8 @@ for key in marshdic:
     mae_inv_final_median = np.median(mae_inv_total_medians)
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    hb = ax.hexbin(x=scalar_ymarsh.inverse_transform(np.asarray(y_ls).reshape(-1, 1)),
-                   y=scalar_ymarsh.inverse_transform(np.asarray(predicted).reshape(-1, 1)),
-                   # x=y_ls,
-                   # y=predicted,
+    hb = ax.hexbin(x=y_ls,
+                   y=predicted,
                    gridsize=30, edgecolors='grey',
                    cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
@@ -613,28 +593,24 @@ for key in marshdic:
     ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
     cb = fig.colorbar(hb, ax=ax)
     ax.plot(
-            [scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
-             scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
-            [scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
-             scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
-        # [y.min(), y.max()],
-        # [y.min(), y.max()],
-             "r--", lw=3)
+        [y.min(), y.max()],
+        [y.min(), y.max()],
+        "r--", lw=3)
 
-    # ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
-    #             bbox=dict(boxstyle='round', fc='w'),
-    #             size=8, ha='left', va='top')
-    # ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
-    #             bbox=dict(boxstyle='round', fc='w'),
-    #             size=8, ha='left', va='top')
-    ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
+    ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
+    ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
-                "_scaledXY_nolog_cv_human.png",
+    # ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
+                "_scaledX_nolog_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -654,9 +630,7 @@ for key in logdfs:
     phi = mdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
     scalar_Xmarsh = StandardScaler()
-    scalar_ymarsh = StandardScaler()
     predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
-    target_scaled = pd.DataFrame(scalar_ymarsh.fit_transform(t), columns=[outcome])
     # Rename Key for naming purposes
     print(key)
 
@@ -679,7 +653,7 @@ for key in logdfs:
     #
     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, target_scaled.values.ravel(), num_feats=6,
+    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=6,
                                                significance_level=0.06)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
@@ -687,9 +661,9 @@ for key in logdfs:
     # first split data set into test train
     from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
 
-    X, y = predictors_scaled[bestfeaturesM], target_scaled
+    X, y = predictors_scaled[bestfeaturesM], t
 
-    baymod = linear_model.BayesianRidge(fit_intercept=False)
+    baymod = linear_model.BayesianRidge(fit_intercept=True)
 
     # # Now use the selected features to create a model from the train data to test on the test data with repeated cv
     # rcv = RepeatedKFold(n_splits=3, n_repeats=100, random_state=1)
@@ -782,8 +756,7 @@ for key in logdfs:
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
             # Collect the unscaled parameters: first unscale then log transform
-            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeaturesM],
-                                                                                              t, baymod)
+            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeaturesM], baymod)
             # log transform
             un_scaled_weights = funcs.log_transform_weights(un_scaled_weights)
 
@@ -810,11 +783,9 @@ for key in logdfs:
             mae = mean_absolute_error(y_test, ypred)
             mae_ls.append(mae)
             # Metrics for inversed y: particularly for MAE
-            r2_inv = r2_score(scalar_ymarsh.inverse_transform(np.asarray(y_test).reshape(-1, 1)),
-                              scalar_ymarsh.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
+            r2_inv = r2_score(y_test, ypred)
             r2_inv_ls.append(r2_inv)
-            mae_inv = mean_absolute_error(scalar_ymarsh.inverse_transform(np.asarray(y_test).reshape(-1, 1)),
-                                          scalar_ymarsh.inverse_transform(np.asarray(ypred).reshape(-1, 1)))
+            mae_inv = mean_absolute_error(y_test, ypred)
             mae_inv_ls.append(mae_inv)
 
         # Average certainty
@@ -865,10 +836,9 @@ for key in logdfs:
     mae_inv_final_median = np.median(mae_inv_total_medians)
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    hb = ax.hexbin(x=scalar_ymarsh.inverse_transform(np.asarray(y_ls).reshape(-1, 1)),
-                   y=scalar_ymarsh.inverse_transform(np.asarray(predicted).reshape(-1, 1)),
-                   # x=y_ls,
-                   # y=predicted,
+    hb = ax.hexbin(
+                   x=y_ls,
+                   y=predicted,
                    gridsize=30, edgecolors='grey',
                    cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
@@ -877,28 +847,24 @@ for key in logdfs:
     ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
     cb = fig.colorbar(hb, ax=ax)
     ax.plot(
-            [scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
-             scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
-            [scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).min(),
-             scalar_ymarsh.inverse_transform(np.asarray(y).reshape(-1, 1)).max()],
-        # [y.min(), y.max()],
-        # [y.min(), y.max()],
+        [y.min(), y.max()],
+        [y.min(), y.max()],
              "r--", lw=3)
 
-    # ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
-    #             bbox=dict(boxstyle='round', fc='w'),
-    #             size=8, ha='left', va='top')
-    # ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
-    #             bbox=dict(boxstyle='round', fc='w'),
-    #             size=8, ha='left', va='top')
-    ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
+    ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
+    ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
-                "_scaledXY_logy_cv_human.png",
+    # ax.annotate("Median r-squared Unscaled = {:.3f}".format(r2_inv_final_median), xy=(20, 210), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
+    #             bbox=dict(boxstyle='round', fc='w'),
+    #             size=8, ha='left', va='top')
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
+                "_scaledX_logy_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -922,8 +888,8 @@ for key in hold_marsh_weights:
     )
     # sns.catplot(data=hold_marsh_weights[key], kind="swarm", palette="ch:.25")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(key) +
-                "_scaledXY_nolog_boxplot_human.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
+                "_scaledX_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -936,7 +902,7 @@ for key in hold_unscaled_weights:
     ax.axhline(0, ls='--')
     sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\" + str(
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(
         key) + "_unscaledWeights_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
@@ -950,7 +916,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\regularization_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\regularization_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -964,7 +930,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\certainty_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -979,7 +945,7 @@ ax.set_title('Distribution of Intercepts [Unscaled]:')
 ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\intercepts_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\intercepts_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -993,14 +959,11 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_XY_nolog\\pred_certainty_scaledXY_nolog_boxplot_human.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\pred_certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
 
 # Following https://christophm.github.io/interpretable-ml-book/limo.html for individual feature importances
 # Want to show points for the 10th, 25th, 50th, 75th, 90th poins of outcome and their feature effects
-
-
-
 

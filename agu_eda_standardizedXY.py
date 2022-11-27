@@ -329,26 +329,26 @@ plt.show()
 
 plt.figure()
 fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='90%thUpper flooding (ft)',
-                      y='Accretion Rate (mm/yr)', palette='rocket')
+                      y='Accretion Rate (mm/yr)')
 plt.title('Investigating Controls on Accretion in Terrebonne Basin')
 plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_flooding.png")
 plt.show()
 
 plt.figure()
 fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='avg flooding (ft)',
-                      y='Accretion Rate (mm/yr)', palette='rocket')
+                      y='Accretion Rate (mm/yr)')
 plt.title('Investigating Controls on Accretion in Terrebonne Basin')
 plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_avgflooding.png")
 plt.show()
 
 plt.figure()
-fig = sns.jointplot(data=gdf, x='distance_to_water_km', y='Accretion Rate (mm/yr)', palette='rocket', hue='Community')
+fig = sns.jointplot(data=gdf, x='distance_to_water_km', y='Accretion Rate (mm/yr)', hue='Community')
 # plt.title('Inves')
 plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_distancewater_joint.png")
 plt.show()
 
 plt.figure()
-fig = sns.jointplot(data=gdf, x='Bulk Density (g/cm3)', y='Accretion Rate (mm/yr)', palette='rocket', hue='Community')
+fig = sns.jointplot(data=gdf, x='Bulk Density (g/cm3)', y='Accretion Rate (mm/yr)', hue='Community')
 # plt.title('Inves')
 plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_bulkDensity_joint.png")
 plt.show()
@@ -367,7 +367,45 @@ jpndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community
 jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ndvi_freshandsal.png")
 plt.show()
 
-# plt.figure()
-# sns.jointplot(data=gdf, x='NDVI', y='Accretion Rate (mm/yr)', hue='Community')
-# plt.show()
+plt.figure()
+jpndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='Soil Porewater Salinity (ppt)', y='Accretion Rate (mm/yr)', hue='Community', palette="rocket")
+jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salinity_freshandsal.png")
+plt.show()
 
+plt.figure()
+domveg = sns.jointplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Dominant (cm)', y='Accretion Rate (mm/yr)', hue='Basins')
+domveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\dominantVeg_freshandsal.png")
+plt.show()
+
+plt.figure()
+herbveg = sns.jointplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Herb (cm)', y='Accretion Rate (mm/yr)',
+              hue='Basins')
+herbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herbVeg_freshandsal.png")
+plt.show()
+
+plt.figure()
+domherbveg = sns.jointplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Herb (cm)',
+                           y='Average Height Dominant (cm)',
+                            hue='Basins')
+domherbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\domherbVeg_freshandsal.png")
+plt.show()
+
+plt.figure()
+tide = sns.jointplot(data=gdf, x='Tide Amp (ft)', y='Accretion Rate (mm/yr)',
+              hue='Community')
+tide.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tide.png")
+plt.show()
+
+plt.figure()
+floodndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='avg flooding (ft)', y='NDVI', hue='Community', palette="rocket")
+floodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\floodndvi_freshandsal.png")
+plt.show()
+
+
+plt.figure()
+upperfloodndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='90%thUpper flooding (ft)', y='NDVI', hue='Community', palette="rocket")
+upperfloodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\upperfloodndvi_freshandsal.png")
+plt.show()
