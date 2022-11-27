@@ -50,7 +50,7 @@ gee = pd.read_csv(r"D:\Etienne\fall2022\agu_data\CRMS_GEE60pfrom2007to2022.csv",
 distRiver = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv",
                         encoding="unicode escape")[['Field1', 'distance_to_river_m', 'width_mean']].groupby('Field1').median()
 nearWater = pd.read_csv(r"D:\Etienne\fall2022\agu_data\ALLDATA2.csv", encoding="unicode_escape")[
-    ['Simple site', 'Distance_to_Water_m']
+    ['Simple site', 'Distance_to_Water_m', 'Distance_to_Ocean_m']
 ].set_index('Simple site')
 floodfreq = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\floodFrequencySitePerYear.csv", encoding="unicode_escape")[[
     'Simple site', 'Flood Freq (Floods/yr)'
@@ -122,10 +122,11 @@ des = udf.describe()  # just to identify which variables are way of the scale
 udf['distance_to_river_km'] = udf['distance_to_river_m']/1000  # convert to km
 udf['river_width_mean_km'] = udf['width_mean']/1000
 udf['distance_to_water_km'] = udf['Distance_to_Water_m']/1000
+udf['distance_to_ocean_km'] = udf['Distance_to_Ocean_m']/1000
 udf['land_lost_km2'] = udf['Land_Lost_m2']*0.000001  # convert to km2
 
 # Drop remade variables
-udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soil Specific Conductance (uS/cm)',
+udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soil Specific Conductance (uS/cm)', 'Distance_to_Ocean_m',
                 'Soil Porewater Specific Conductance (uS/cm)',
                 'Land_Lost_m2'], axis=1)
 udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
@@ -162,6 +163,7 @@ rdf = rdf.rename(columns={
     'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
     'log_distance_to_water_km': 'log distance to water km',
     'log_distance_to_river_km': 'log distance to river km',
+    'distance_to_ocean_km': 'distance to ocean km',
     '10%thLower_flooding (ft)': '10%thLower flooding (ft)',
     '90%thUpper_flooding (ft)': '90%thUpper flooding (ft)',
     'avg_flooding (ft)': 'avg flooding (ft)',
@@ -197,37 +199,37 @@ marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Interm
 # pp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allvars.png")
 # plt.show()
 
-## Doing pariplot for each of selected variables of backward elimination
-# all sites
-pp_all = sns.pairplot(gdf[[ 'Accretion Rate (mm/yr)', 'Soil Porewater Salinity (ppt)', 'Average Height Herb (cm)',
-                            'Average Height Dominant (cm)', 'Tide Amp (ft)', 'avg flooding (ft)',
-                            'Flood Freq (Floods/yr)']])
-pp_all.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allsites.png")
-plt.show()
-# brackish
-pp_brack = sns.pairplot(gdf[gdf['Community'] == 'Brackish'][[ 'Accretion Rate (mm/yr)', 'Soil Porewater Salinity (ppt)', 'Average Height Herb (cm)',
-                            'Average Height Dominant (cm)']])
-pp_brack.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_brack.png")
-plt.show()
-# Freshwater log(y)
-pp_freshlogy = sns.pairplot(gdf[gdf['Community'] == 'Freshwater'][[ 'Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
-                                  'Tide Amp (ft)', 'std dev avg flooding (ft)', 'avg percent flooded (%)']])
-pp_freshlogy.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_freshlogy.png")
-plt.show()
-# Freshwater
-pp_fresh = sns.pairplot(gdf[gdf['Community'] == 'Freshwater'][['Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
-                                  'Tide Amp (ft)', 'std dev avg flooding (ft)', 'avg percent flooded (%)']])
-pp_fresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_fresh.png")
-plt.show()
-# Intermediate
-pp_inter = sns.pairplot(gdf[gdf['Community'] == 'Intermediate'][['Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
-                                  'Tide Amp (ft)', 'std dev avg flooding (ft)', 'Flood Freq (Floods/yr)']])
-pp_inter.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_inter.png")
-plt.show()
-# Saline
-pp_inter = sns.pairplot(gdf[gdf['Community'] == 'Saline'][['Accretion Rate (mm/yr)', 'NDVI']])
-pp_inter.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_inter.png")
-plt.show()
+# ## Doing pariplot for each of selected variables of backward elimination
+# # all sites
+# pp_all = sns.pairplot(gdf[[ 'Accretion Rate (mm/yr)', 'Soil Porewater Salinity (ppt)', 'Average Height Herb (cm)',
+#                             'Average Height Dominant (cm)', 'Tide Amp (ft)', 'avg flooding (ft)',
+#                             'Flood Freq (Floods/yr)']])
+# pp_all.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_allsites.png")
+# plt.show()
+# # brackish
+# pp_brack = sns.pairplot(gdf[gdf['Community'] == 'Brackish'][[ 'Accretion Rate (mm/yr)', 'Soil Porewater Salinity (ppt)', 'Average Height Herb (cm)',
+#                             'Average Height Dominant (cm)']])
+# pp_brack.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_brack.png")
+# plt.show()
+# # Freshwater log(y)
+# pp_freshlogy = sns.pairplot(gdf[gdf['Community'] == 'Freshwater'][[ 'Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
+#                                   'Tide Amp (ft)', 'std dev avg flooding (ft)', 'avg percent flooded (%)']])
+# pp_freshlogy.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_freshlogy.png")
+# plt.show()
+# # Freshwater
+# pp_fresh = sns.pairplot(gdf[gdf['Community'] == 'Freshwater'][['Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
+#                                   'Tide Amp (ft)', 'std dev avg flooding (ft)', 'avg percent flooded (%)']])
+# pp_fresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_fresh.png")
+# plt.show()
+# # Intermediate
+# pp_inter = sns.pairplot(gdf[gdf['Community'] == 'Intermediate'][['Accretion Rate (mm/yr)', 'Average Height Dominant (cm)', 'NDVI', 'tss med mg/l',
+#                                   'Tide Amp (ft)', 'std dev avg flooding (ft)', 'Flood Freq (Floods/yr)']])
+# pp_inter.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_inter.png")
+# plt.show()
+# # Saline
+# pp_inter = sns.pairplot(gdf[gdf['Community'] == 'Saline'][['Accretion Rate (mm/yr)', 'NDVI']])
+# pp_inter.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\pp_inter.png")
+# plt.show()
 
 # 1st: What is the difference in the organic and mineral mass fractions
 A = 10000  # This is the area of the study, in our case it is per site, so lets say the area is 1 m2 in cm
@@ -374,21 +376,35 @@ jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salin
 plt.show()
 
 plt.figure()
-domveg = sns.jointplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Dominant (cm)', y='Accretion Rate (mm/yr)', hue='Basins')
-domveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\dominantVeg_freshandsal.png")
+domveg = sns.jointplot(data=gdf, x='Average Height Dominant (cm)', y='Accretion Rate (mm/yr)', hue='Community')
+domveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\dominantVeg.png")
 plt.show()
 
 plt.figure()
-herbveg = sns.jointplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Herb (cm)', y='Accretion Rate (mm/yr)',
-              hue='Basins')
-herbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herbVeg_freshandsal.png")
+herbveg = sns.jointplot(data=gdf, x='Average Height Herb (cm)', y='Accretion Rate (mm/yr)',
+              hue='Community')
+herbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herbVeg.png")
 plt.show()
 
 plt.figure()
-domherbveg = sns.jointplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Herb (cm)',
+domherbveg = sns.jointplot(data=gdf, x='Average Height Herb (cm)',
                            y='Average Height Dominant (cm)',
-                            hue='Basins')
-domherbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\domherbVeg_freshandsal.png")
+                            hue='Community')
+domherbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\domherbVeg.png")
+plt.show()
+
+plt.figure()
+herblat = sns.jointplot(data=gdf, x='Average Height Herb (cm)',
+                           y='Latitude',
+                            hue='Community')
+herblat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herblat.png")
+plt.show()
+
+plt.figure()
+herblat = sns.jointplot(data=gdf, x='Average Height Herb (cm)',
+                           y='Latitude',
+                            hue='Community')
+herblat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herblat.png")
 plt.show()
 
 plt.figure()
@@ -431,7 +447,27 @@ templat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\temp
 plt.show()
 
 plt.figure()
-templatsalfresh = sns.jointplot(data=gdf(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater'),
-                x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community')
+templatsalfresh = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community', palette='rocket')
 templatsalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templatsalfresh.png")
 plt.show()
+
+plt.figure()
+tempvasalfresh = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='Soil Porewater Temperature (°C)', y='Accretion Rate (mm/yr)', hue='Community', palette='rocket')
+tempvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempvasalfresh.png")
+plt.show()
+
+plt.figure()
+latvasalfresh = sns.jointplot(data=gdf,
+                x='Latitude', y='Accretion Rate (mm/yr)', hue='Community')
+latvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\latvasalfresh.png")
+plt.show()
+
+
+plt.figure()
+oceantemp = sns.jointplot(data=gdf,
+                x='distance to ocean km', y='Soil Porewater Temperature (°C)', hue='Community')
+# latvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\latvasalfresh.png")
+plt.show()
+

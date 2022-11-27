@@ -50,7 +50,7 @@ gee = pd.read_csv(r"D:\Etienne\fall2022\agu_data\CRMS_GEE60pfrom2007to2022.csv",
 distRiver = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv",
                         encoding="unicode escape")[['Field1', 'distance_to_river_m', 'width_mean']].groupby('Field1').median()
 nearWater = pd.read_csv(r"D:\Etienne\fall2022\agu_data\ALLDATA2.csv", encoding="unicode_escape")[
-    ['Simple site', 'Distance_to_Water_m']
+    ['Simple site', 'Distance_to_Water_m']  # 'Distance_to_Ocean_m'
 ].set_index('Simple site')
 floodfreq = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\floodFrequencySitePerYear.csv", encoding="unicode_escape")[[
     'Simple site', 'Flood Freq (Floods/yr)'
@@ -122,10 +122,12 @@ des = udf.describe()  # just to identify which variables are way of the scale
 udf['distance_to_river_km'] = udf['distance_to_river_m']/1000  # convert to km
 udf['river_width_mean_km'] = udf['width_mean']/1000
 udf['distance_to_water_km'] = udf['Distance_to_Water_m']/1000
+# udf['distance_to_ocean_km'] = udf['Distance_to_Ocean_m']/1000
 udf['land_lost_km2'] = udf['Land_Lost_m2']*0.000001  # convert to km2
 
 # Drop remade variables
-udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soil Specific Conductance (uS/cm)',
+udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', #  'Distance_to_Ocean_m',
+                'Soil Specific Conductance (uS/cm)',
                 'Soil Porewater Specific Conductance (uS/cm)',
                 'Land_Lost_m2'], axis=1)
 udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
@@ -141,8 +143,9 @@ rdf = funcs.outlierrm(udf.drop(['Community', 'Latitude', 'Longitude'], axis=1), 
 rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
 rdf['log_river_width_mean_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['river_width_mean_km']]
 rdf['log_distance_to_river_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_river_km']]
+# rdf['log_distance_to_ocean_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_ocean_km']]
 # drop the old features
-rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mean_km'], axis=1)
+rdf = rdf.drop(['distance_to_water_km', 'distance_to_river_km', 'river_width_mean_km'], axis=1)  # 'distance_to_ocean_km'
 # Now it is feature selection time
 # drop any variables related to the outcome
 rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
@@ -153,16 +156,17 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)', 'Soil Salinity (ppt)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    # 'Soil Porewater Temperature (°C)',
+    'Soil Porewater Temperature (°C)',
     'Average_Marsh_Elevation (ft. NAVD88)',
     'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Moisture Content (%)',  # 'Organic Matter (%)',
+    'Soil Moisture Content (%)',  'Organic Matter (%)',
 ], axis=1)
 
 # Rename some variables for better text wrapping
 rdf = rdf.rename(columns={
     'Tide_Amp (ft)': 'Tide Amp (ft)',
     'avg_percentflooded (%)': ' avg percent flooded (%)',
+    # 'log_distance_to_ocean_km': 'log distance to ocean km',
     # 'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
     'log_distance_to_water_km': 'log distance to water km',
     'log_distance_to_river_km': 'log distance to river km',
@@ -236,7 +240,7 @@ weight_certainty_ls = []
 prediction_certainty_ls = []
 
 for i in range(100):  # for 100 repeates
-    try_cv = KFold(n_splits=3, shuffle=True)
+    try_cv = KFold(n_splits=5, shuffle=True)
     results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
                                        scoring=('r2', 'neg_mean_absolute_error'),
                                        n_jobs=-1, return_estimator=True)
@@ -334,14 +338,14 @@ fig, ax = plt.subplots(figsize=(6, 4))
 hb = ax.hexbin(x=y_ls,
                y=predicted,
                gridsize=30, edgecolors='grey',
-               cmap='YlGnBu', mincnt=1)
+               cmap='YlOrRd', mincnt=1)
 ax.set_facecolor('white')
 ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
-ax.set_title("All Sites: 100x Repeated 3-fold CV")
+ax.set_title("All Sites: 100x Repeated 5-fold CV")
 cb = fig.colorbar(hb, ax=ax)
 ax.plot([y.min(), y.max()], [y.min(), y.max()],
-    "k--", lw=3)
+    "r--", lw=3)
 
 ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
@@ -355,7 +359,7 @@ ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoor
 # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
 #             bbox=dict(boxstyle='round', fc='w'),
 #             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\all_sites_scaledX_nolog_cv.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\all_sites_scaledX_nolog_cv_human.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -486,7 +490,7 @@ for key in marshdic:
     prediction_certainty_ls = []
 
     for i in range(100):  # for 100 repeates
-        try_cv = KFold(n_splits=3, shuffle=True)
+        try_cv = KFold(n_splits=5, shuffle=True)
         results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
                                            scoring=('r2', 'neg_mean_absolute_error'),
                                            n_jobs=-1, return_estimator=True)
@@ -585,16 +589,16 @@ for key in marshdic:
     hb = ax.hexbin(x=y_ls,
                    y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlGnBu', mincnt=1)
+                   cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
-    ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
+    ax.set_title(str(key) + " : 100x Repeated 5-fold CV")
     cb = fig.colorbar(hb, ax=ax)
     ax.plot(
         [y.min(), y.max()],
         [y.min(), y.max()],
-        "k--", lw=3)
+        "r--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -609,7 +613,7 @@ for key in marshdic:
     #             bbox=dict(boxstyle='round', fc='w'),
     #             size=8, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_nolog_cv.png",
+                "_scaledX_nolog_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -736,7 +740,7 @@ for key in logdfs:
     prediction_certainty_ls = []
 
     for i in range(100):  # for 100 repeates
-        try_cv = KFold(n_splits=3, shuffle=True)
+        try_cv = KFold(n_splits=5, shuffle=True)
         results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
                                            scoring=('r2', 'neg_mean_absolute_error'),
                                            n_jobs=-1, return_estimator=True)
@@ -839,16 +843,16 @@ for key in logdfs:
                    x=y_ls,
                    y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlGnBu', mincnt=1)
+                   cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
-    ax.set_title(str(key) + " : 100x Repeated 3-fold CV")
+    ax.set_title(str(key) + " : 100x Repeated 5-fold CV")
     cb = fig.colorbar(hb, ax=ax)
     ax.plot(
         [y.min(), y.max()],
         [y.min(), y.max()],
-             "k--", lw=3)
+             "r--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -863,7 +867,7 @@ for key in logdfs:
     #             bbox=dict(boxstyle='round', fc='w'),
     #             size=8, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_logy_cv.png",
+                "_scaledX_logy_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -888,7 +892,7 @@ for key in hold_marsh_weights:
     # sns.catplot(data=hold_marsh_weights[key], kind="swarm", palette="ch:.25")
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_nolog_boxplot.png",
+                "_scaledX_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -910,7 +914,7 @@ for key in hold_unscaled_weights:
 
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(
-        key) + "_unscaledWeights_nolog_boxplot.png",
+        key) + "_unscaledWeights_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -924,7 +928,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\regularization_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\regularization_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -938,7 +942,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\certainty_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -953,7 +957,7 @@ ax.set_title('Distribution of Intercepts [Unscaled]:')
 ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\intercepts_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\intercepts_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -967,7 +971,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\pred_certainty_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\pred_certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
