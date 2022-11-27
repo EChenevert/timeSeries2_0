@@ -756,7 +756,7 @@ for key in logdfs:
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
             # Collect the unscaled parameters: first unscale then log transform
-            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_full_standardization(phi[bestfeaturesM], baymod)
+            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeaturesM], baymod)
             # log transform
             un_scaled_weights = funcs.log_transform_weights(un_scaled_weights)
 
@@ -900,13 +900,21 @@ for key in hold_unscaled_weights:
     fig, ax = plt.subplots()
     ax.set_title('Distribution of Learned Weight Vectors [Unscaled]: ' + str(key) + " Sites")
     ax.axhline(0, ls='--')
-    sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")
+    boxplot = sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")
+    # medians = hold_unscaled_weights[key].median()
+    # vertical_offset = hold_unscaled_weights[key].median() * 0.05  # offset from median for display
+    #
+    # for xtick in boxplot.get_xticks():
+    #     boxplot.text(xtick, medians[xtick] + vertical_offset, medians[xtick],
+    #                   horizontalalignment='center', size='x-small', color='w', weight='semibold')
+
+    plt.show()
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(
         key) + "_unscaledWeights_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
-    plt.show()
+
 
 # Plot the distribution of the eff_reg parameter for each run
 eff_reg_df = pd.DataFrame(hold_marsh_regularizors)

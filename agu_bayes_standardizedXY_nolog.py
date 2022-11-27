@@ -276,7 +276,7 @@ for i in range(100):  # for 100 repeates
         # Compute error metrics
         ypred, ystd = baymod.predict(X_test, return_std=True)
         # Save average std on each prediction
-        pred_certain.append(np.mean(ystd))
+        pred_certain.append(np.mean(scalar_ywhole.inverse_transform(np.asarray(ystd).reshape(-1, 1))))
         # Metrics for scaled y: particularly for MAE
         r2 = r2_score(y_test, ypred)
         r2_ls.append(r2)
@@ -539,7 +539,7 @@ for key in marshdic:
             # Compute error metrics
             ypred, ystd = baymod.predict(X_test, return_std=True)
             # Average std
-            pred_certain.append(np.mean(ystd))
+            pred_certain.append(np.mean(scalar_ymarsh.inverse_transform(np.asarray(ystd).reshape(-1, 1))))
             # Metrics for scaled y: particularly for MAE
             r2 = r2_score(y_test, ypred)
             r2_ls.append(r2)
@@ -803,7 +803,7 @@ for key in logdfs:
             # Compute error metrics
             ypred, ystd = baymod.predict(X_test, return_std=True)
             # Average std
-            pred_certain.append(np.mean(ystd))
+            pred_certain.append(np.mean(scalar_ymarsh.inverse_transform(np.asarray(ystd).reshape(-1, 1))))
             # Metrics for scaled y: particularly for MAE
             r2 = r2_score(y_test, ypred)
             r2_ls.append(r2)
