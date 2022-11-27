@@ -585,7 +585,7 @@ for key in marshdic:
     hb = ax.hexbin(x=y_ls,
                    y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlOrRd', mincnt=1)
+                   cmap='YlGnBu', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
@@ -594,7 +594,7 @@ for key in marshdic:
     ax.plot(
         [y.min(), y.max()],
         [y.min(), y.max()],
-        "r--", lw=3)
+        "k--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),

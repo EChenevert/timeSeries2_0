@@ -429,3 +429,9 @@ templat = sns.jointplot(data=gdf,
                 x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community')
 templat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templat.png")
 plt.show()
+
+plt.figure()
+templatsalfresh = sns.jointplot(data=gdf(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater'),
+                x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community')
+templatsalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templatsalfresh.png")
+plt.show()
