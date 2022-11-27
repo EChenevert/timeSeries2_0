@@ -153,10 +153,10 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)', 'Soil Salinity (ppt)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    # 'Soil Porewater Temperature (°C)',
+    'Soil Porewater Temperature (°C)',
     'Average_Marsh_Elevation (ft. NAVD88)',
     'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Moisture Content (%)',  # 'Organic Matter (%)',
+    'Soil Moisture Content (%)', 'Organic Matter (%)',
 ], axis=1)
 
 # Rename some variables for better text wrapping
@@ -181,6 +181,7 @@ phi = rdf.drop([outcome], axis=1).reset_index().drop('index', axis=1)
 from sklearn.preprocessing import StandardScaler
 scalar_Xwhole = StandardScaler()
 predictors_scaled = pd.DataFrame(scalar_Xwhole.fit_transform(phi), columns=phi.columns.values)
+
 # # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
 # br = linear_model.BayesianRidge(fit_intercept=False)
 # feature_selector = ExhaustiveFeatureSelector(br,
@@ -334,14 +335,14 @@ fig, ax = plt.subplots(figsize=(6, 4))
 hb = ax.hexbin(x=y_ls,
                y=predicted,
                gridsize=30, edgecolors='grey',
-               cmap='YlGnBu', mincnt=1)
+               cmap='YlOrRd', mincnt=1)
 ax.set_facecolor('white')
 ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
 ax.set_title("All Sites: 100x Repeated 3-fold CV")
 cb = fig.colorbar(hb, ax=ax)
 ax.plot([y.min(), y.max()], [y.min(), y.max()],
-    "k--", lw=3)
+    "r--", lw=3)
 
 ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
@@ -355,7 +356,7 @@ ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoor
 # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
 #             bbox=dict(boxstyle='round', fc='w'),
 #             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\all_sites_scaledX_nolog_cv.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\all_sites_scaledX_nolog_cv_human.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -370,8 +371,8 @@ freshdf = gdf[gdf['Community'] == 'Freshwater']
 interdf = gdf[gdf['Community'] == 'Intermediate']
 combined = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Brackish')]
 # Exclude swamp
-marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf}
-            #'Intermediate and Brackish': combined}
+marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
+            'Intermediate and Brackish': combined}
 
 for key in marshdic:
     print(key)
@@ -402,15 +403,7 @@ for key in marshdic:
     #
     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=6,
-                                               significance_level=0.06)
-
-    # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
-    #### NOTE: I should do separate tests to determine which split of the data is optimal ######
-    # first split data set into test train
-    from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
-
-    X, y = predictors_scaled[bestfeaturesM], t
+    X, y = predictors_scaled[bestfeatures], t
 
     baymod = linear_model.BayesianRidge(fit_intercept=True)
 
@@ -505,7 +498,7 @@ for key in marshdic:
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
             # Collect the unscaled parameters
-            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeaturesM], baymod)
+            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeatures], baymod)
             unscaled_w_ls.append(un_scaled_weights)
             intercept_ls.append(y_intercept)
             # Collect scaled parameters
@@ -560,8 +553,8 @@ for key in marshdic:
         y_ls += list(y.values.ravel())
 
     # Add each of the model parameters to a dictionary
-    weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeaturesM)
-    unscaled_weight_df = pd.DataFrame(unscaled_w_ls, columns=bestfeaturesM)
+    weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeatures)
+    unscaled_weight_df = pd.DataFrame(unscaled_w_ls, columns=bestfeatures)
     hold_marsh_weights[str(key)] = weight_df
     hold_unscaled_weights[str(key)] = unscaled_weight_df
     hold_intercept[str(key)] = intercept_ls
@@ -608,8 +601,8 @@ for key in marshdic:
     # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
     #             bbox=dict(boxstyle='round', fc='w'),
     #             size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_nolog_cv.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\" + str(key) +
+                "_scaledX_nolog_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -633,34 +626,13 @@ for key in logdfs:
     # Rename Key for naming purposes
     print(key)
 
-    # # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-    # # mlr = linear_model.LinearRegression()
-    # br = linear_model.BayesianRidge(fit_intercept=False)
-    # feature_selector = ExhaustiveFeatureSelector(br,
-    #                                                  min_features=1,
-    #                                                  max_features=3,
-    #                                                  # I should only use 5 features (15 takes waaaaay too long)
-    #                                                  scoring='neg_root_mean_squared_error',
-    #                                                  # print_progress=True,
-    #                                                  cv=3)  # 5 fold cross-validation
-    #
-    # efsmlr = feature_selector.fit(predictors_scaled, target_scaled.values.ravel())  # these are not scaled... to reduce data leakage
-    #
-    # print('Best CV r2 score: %.2f' % efsmlr.best_score_)
-    # print('Best subset (indices):', efsmlr.best_idx_)
-    # print('Best subset (corresponding names):', efsmlr.best_feature_names_)
-    #
-    # bestfeaturesM = list(efsmlr.best_feature_names_)
-
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=6,
-                                               significance_level=0.06)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
     #### NOTE: I should do separate tests to determine which split of the data is optimal ######
     # first split data set into test train
     from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
 
-    X, y = predictors_scaled[bestfeaturesM], t
+    X, y = predictors_scaled[bestfeatures], t
 
     baymod = linear_model.BayesianRidge(fit_intercept=True)
 
@@ -755,7 +727,7 @@ for key in logdfs:
             # Fit the model
             baymod.fit(X_train, y_train.values.ravel())
             # Collect the unscaled parameters: first unscale then log transform
-            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeaturesM], baymod)
+            un_scaled_weights, y_intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeatures], baymod)
             # log transform
             un_scaled_weights = funcs.log_transform_weights(un_scaled_weights)
 
@@ -813,8 +785,8 @@ for key in logdfs:
         y_ls += list(y.values.ravel())
 
     # Add each of the model parameters to a dictionary
-    weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeaturesM)
-    unscaled_weight_df = pd.DataFrame(unscaled_w_ls, columns=bestfeaturesM)
+    weight_df = pd.DataFrame(weight_vector_ls, columns=bestfeatures)
+    unscaled_weight_df = pd.DataFrame(unscaled_w_ls, columns=bestfeatures)
     hold_marsh_weights[str(key)] = weight_df
     hold_unscaled_weights[str(key)] = unscaled_weight_df
     hold_intercept[str(key)] = intercept_ls
@@ -839,7 +811,7 @@ for key in logdfs:
                    x=y_ls,
                    y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlGnBu', mincnt=1)
+                   cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
@@ -848,7 +820,7 @@ for key in logdfs:
     ax.plot(
         [y.min(), y.max()],
         [y.min(), y.max()],
-             "k--", lw=3)
+             "r--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -862,8 +834,8 @@ for key in logdfs:
     # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
     #             bbox=dict(boxstyle='round', fc='w'),
     #             size=8, ha='left', va='top')
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_logy_cv.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\" + str(key) +
+                "_scaledX_logy_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -887,8 +859,8 @@ for key in hold_marsh_weights:
     )
     # sns.catplot(data=hold_marsh_weights[key], kind="swarm", palette="ch:.25")
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_nolog_boxplot.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\" + str(key) +
+                "_scaledX_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -909,8 +881,8 @@ for key in hold_unscaled_weights:
     #                   horizontalalignment='center', size='x-small', color='w', weight='semibold')
 
     funcs.wrap_labels(ax, 10)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(
-        key) + "_unscaledWeights_nolog_boxplot.png",
+    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\" + str(
+        key) + "_unscaledWeights_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -924,7 +896,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\regularization_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\regularization_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -938,7 +910,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\certainty_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -953,7 +925,7 @@ ax.set_title('Distribution of Intercepts [Unscaled]:')
 ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\intercepts_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\intercepts_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -967,7 +939,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\pred_certainty_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\setFeatures_scaled_X\\pred_certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()

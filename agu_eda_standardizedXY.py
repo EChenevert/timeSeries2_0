@@ -409,3 +409,23 @@ upperfloodndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['C
                 x='90%thUpper flooding (ft)', y='NDVI', hue='Community', palette="rocket")
 upperfloodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\upperfloodndvi_freshandsal.png")
 plt.show()
+
+
+# Looking into soil temperature
+plt.figure()
+temporg = sns.jointplot(data=gdf,
+                x='Soil Porewater Temperature (°C)', y='Organic Matter (%)', hue='Community')
+temporg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\temporg.png")
+plt.show()
+
+plt.figure()
+tempva = sns.jointplot(data=gdf,
+                x='Soil Porewater Temperature (°C)', y='Accretion Rate (mm/yr)', hue='Community')
+tempva.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempva.png")
+plt.show()
+
+plt.figure()
+templat = sns.jointplot(data=gdf,
+                x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community')
+templat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templat.png")
+plt.show()
