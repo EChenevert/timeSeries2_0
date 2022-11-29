@@ -261,13 +261,13 @@ sns.boxplot(y='Organic Mass Accumulation (g/yr)', x='Community', data=gdf,  orie
 axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
 axes[1].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
 plt.show()
-f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\mineral_v_organic_mass.png")
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\mineral_v_organic_mass.png", dpi=300)
 
 plt.figure()
 plt.title('Organic Fraction Marsh Types')
 orgviolin = sns.violinplot(data=gdf, x='Community', y='Organic Matter (%)', palette="viridis")
 fig = orgviolin.get_figure()
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\organicFrac.png")
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\organicFrac.png", dpi=300)
 plt.show()
 # I guess the one significant thing here is that saline marsh has a lower organic fraction...
 
@@ -275,32 +275,33 @@ plt.show()
 # 2st: Focusing on accretion and subsidence
 # Make keep binary var to define highly organic from mineral soils
 # Make a binary of peat or not
-gdf['Mineral or Peat'] = ['Peat' if val > 30 else 'Mineral' for val in gdf['Organic Matter (%)']]  # common threshold for peat... site
+gdf['Mineral or Peat Soil'] = ['Peat' if val > 30 else 'Mineral' for val in gdf['Organic Matter (%)']]  # common threshold for peat... site
 
 f, axes = plt.subplots(1, 2, sharex=True, sharey=True)
 sns.boxplot(y='Accretion Rate (mm/yr)', x='Community', data=gdf,  orient='v', ax=axes[0], showfliers=False,
-               hue='Mineral or Peat', # split=True,
+               hue='Mineral or Peat Soil', # split=True,
                palette="viridis")
 sns.boxplot(y='Shallow Subsidence Rate (mm/yr)', x='Community', data=gdf,  orient='v', ax=axes[1], showfliers=False,
-               hue='Mineral or Peat', # split=True,
+               hue='Mineral or Peat Soil', # split=True,
                palette="viridis")
 axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
 axes[1].set_xticklabels(axes[0].get_xticklabels(), rotation=22)
 plt.show()
-f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_perCommunity.png")
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_perCommunity.png", dpi=300)
 
 # Lets check out the relationship between subsidence and accretion: Definetly a positive relationship here
 plt.figure()
-jp = sns.jointplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)', hue='Mineral or Peat',
+jp = sns.jointplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)',
+                   hue='Predominantly Mineral or Peat',
                    palette='rocket')
 plt.show()
-jp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_jp.png")
+jp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_jp.png", dpi=300)
 # Lets check the realtionship between accretion and distance to the river
 g = sns.FacetGrid(gdf, col="Community", hue="Basins")
 g.map(sns.scatterplot, "distance_to_river_km", "Accretion Rate (mm/yr)", alpha=.7)
 g.add_legend()
 plt.show()
-g.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\distance_from_river_plots.png")
+g.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\distance_from_river_plots.png", dpi=300)
 
 
 f = plt.figure(figsize=(7, 5))
@@ -312,7 +313,7 @@ sns.histplot(data=gdf, ax=ax, stat="count", multiple="stack",
 ax.set_title("Seaborn Stacked Histogram")
 ax.set_xlabel("Accretion Rate (mm/yr)")
 ax.set_ylabel("Count")
-f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\stacked_accretion.png")
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\stacked_accretion.png", dpi=300)
 plt.show()
 
 # Maybe the source of increased accretion in terrebonne is due to reworking from land lost
@@ -333,141 +334,180 @@ plt.figure()
 fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='90%thUpper flooding (ft)',
                       y='Accretion Rate (mm/yr)')
 plt.title('Investigating Controls on Accretion in Terrebonne Basin')
-plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_flooding.png")
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_flooding.png", dpi=300)
 plt.show()
 
 plt.figure()
 fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='avg flooding (ft)',
                       y='Accretion Rate (mm/yr)')
 plt.title('Investigating Controls on Accretion in Terrebonne Basin')
-plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_avgflooding.png")
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_avgflooding.png", dpi=300)
 plt.show()
 
 plt.figure()
 fig = sns.jointplot(data=gdf, x='distance_to_water_km', y='Accretion Rate (mm/yr)', hue='Community')
 # plt.title('Inves')
-plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_distancewater_joint.png")
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_distancewater_joint.png", dpi=300)
 plt.show()
 
 plt.figure()
 fig = sns.jointplot(data=gdf, x='Bulk Density (g/cm3)', y='Accretion Rate (mm/yr)', hue='Community')
 # plt.title('Inves')
-plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_bulkDensity_joint.png")
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_bulkDensity_joint.png", dpi=300)
 plt.show()
 
 plt.figure()
 fig = sns.scatterplot(data=gdf[(gdf['Basins'] == 'Terrebonne') & (gdf['Community'] == 'Saline')], x='windspeed',
                 y='Accretion Rate (mm/yr)')
 plt.title('Investigatin Controls on Accretion in Terrebonne Basin')
-plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_winspeed.png")
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\jp_terrebonne_winspeed.png", dpi=300)
 plt.show()
 
 # Lets investigate NDVI: particularly for freshwater and saline marshes since they got opposite effects
 plt.figure()
 jpndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
                 x='NDVI', y='Accretion Rate (mm/yr)', hue='Community', palette="rocket")
-jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ndvi_freshandsal.png")
+jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ndvi_freshandsal.png", dpi=300)
+plt.show()
+
+plt.figure()
+salflood = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                x='Soil Porewater Salinity (ppt)', y='90%thUpper flooding (ft)', hue='Community', palette="rocket")
+salflood.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salflood.png", dpi=300)
 plt.show()
 
 plt.figure()
 jpndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
                 x='Soil Porewater Salinity (ppt)', y='Accretion Rate (mm/yr)', hue='Community', palette="rocket")
-jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salinity_freshandsal.png")
+jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salinity_freshandsal.png", dpi=300)
 plt.show()
 
 plt.figure()
 domveg = sns.jointplot(data=gdf, x='Average Height Dominant (cm)', y='Accretion Rate (mm/yr)', hue='Community')
-domveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\dominantVeg.png")
+domveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\dominantVeg.png", dpi=300)
 plt.show()
 
 plt.figure()
 herbveg = sns.jointplot(data=gdf, x='Average Height Herb (cm)', y='Accretion Rate (mm/yr)',
               hue='Community')
-herbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herbVeg.png")
+herbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herbVeg.png", dpi=300)
 plt.show()
 
 plt.figure()
 domherbveg = sns.jointplot(data=gdf, x='Average Height Herb (cm)',
                            y='Average Height Dominant (cm)',
                             hue='Community')
-domherbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\domherbVeg.png")
+domherbveg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\domherbVeg.png", dpi=300)
 plt.show()
 
 plt.figure()
 herblat = sns.jointplot(data=gdf, x='Average Height Herb (cm)',
                            y='Latitude',
                             hue='Community')
-herblat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herblat.png")
+herblat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herblat.png", dpi=300)
 plt.show()
 
 plt.figure()
 herblat = sns.jointplot(data=gdf, x='Average Height Herb (cm)',
                            y='Latitude',
                             hue='Community')
-herblat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herblat.png")
+herblat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\herblat.png", dpi=300)
 plt.show()
 
 plt.figure()
 tide = sns.jointplot(data=gdf, x='Tide Amp (ft)', y='Accretion Rate (mm/yr)',
               hue='Community')
-tide.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tide.png")
+tide.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tide.png", dpi=300)
 plt.show()
 
 plt.figure()
 floodndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
                 x='avg flooding (ft)', y='NDVI', hue='Community', palette="rocket")
-floodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\floodndvi_freshandsal.png")
+floodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\floodndvi_freshandsal.png", dpi=300)
 plt.show()
 
 
 plt.figure()
 upperfloodndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
                 x='90%thUpper flooding (ft)', y='NDVI', hue='Community', palette="rocket")
-upperfloodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\upperfloodndvi_freshandsal.png")
+upperfloodndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\upperfloodndvi_freshandsal.png", dpi=300)
 plt.show()
 
+plt.figure()
+vaorg = sns.jointplot(data=gdf,
+                x='Organic Matter (%)', y='Accretion Rate (mm/yr)', hue='Community')
+vaorg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\vaorg.png", dpi=300)
+plt.show()
+
+plt.figure()
+vaorg = sns.jointplot(data=gdf,
+                x='Organic Matter (%)', y='NDVI', hue='Community')
+vaorg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\vaorg.png", dpi=300)
+plt.show()
 
 # Looking into soil temperature
 plt.figure()
 temporg = sns.jointplot(data=gdf,
                 x='Soil Porewater Temperature (°C)', y='Organic Matter (%)', hue='Community')
-temporg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\temporg.png")
+temporg.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\temporg.png", dpi=300)
 plt.show()
 
 plt.figure()
 tempva = sns.jointplot(data=gdf,
                 x='Soil Porewater Temperature (°C)', y='Accretion Rate (mm/yr)', hue='Community')
-tempva.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempva.png")
+tempva.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempva.png", dpi=300)
 plt.show()
 
 plt.figure()
 templat = sns.jointplot(data=gdf,
-                x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community')
-templat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templat.png")
+                y='Soil Porewater Temperature (°C)', x='Latitude', hue='Community')
+templat.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templat.png", dpi=300)
+plt.show()
+
+plt.figure()
+tempbulk = sns.jointplot(data=gdf,
+                y='Soil Porewater Temperature (°C)', x='Bulk Density (g/cm3)', hue='Community')
+tempbulk.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempbulk.png", dpi=300)
+plt.show()
+
+plt.figure()
+tideflood = sns.jointplot(data=gdf,
+                y='Tide Amp (ft)', x='avg flooding (ft)', hue='Community')
+tideflood.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tideflood.png", dpi=300)
+plt.show()
+
+plt.figure()
+orgndvi = sns.jointplot(data=gdf,
+                y='Organic Matter (%)', x='NDVI', hue='Community')
+orgndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\orgndvi.png", dpi=300)
+plt.show()
+
+plt.figure()
+salfresh_orgndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
+                y='Organic Matter (%)', x='NDVI', hue='Community', palette='rocket')
+salfresh_orgndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salfresh_orgndvi.png", dpi=300)
 plt.show()
 
 plt.figure()
 templatsalfresh = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
                 x='Soil Porewater Temperature (°C)', y='Latitude', hue='Community', palette='rocket')
-templatsalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templatsalfresh.png")
+templatsalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\templatsalfresh.png", dpi=300)
 plt.show()
 
 plt.figure()
 tempvasalfresh = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Freshwater')],
                 x='Soil Porewater Temperature (°C)', y='Accretion Rate (mm/yr)', hue='Community', palette='rocket')
-tempvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempvasalfresh.png")
+tempvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\tempvasalfresh.png", dpi=300)
 plt.show()
 
 plt.figure()
 latvasalfresh = sns.jointplot(data=gdf,
                 x='Latitude', y='Accretion Rate (mm/yr)', hue='Community')
-latvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\latvasalfresh.png")
+latvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\latvasalfresh.png", dpi=300)
 plt.show()
-
 
 plt.figure()
 oceantemp = sns.jointplot(data=gdf,
                 x='distance to ocean km', y='Soil Porewater Temperature (°C)', hue='Community')
-# latvasalfresh.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\latvasalfresh.png")
+oceantemp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\oceantemp.png", dpi=300)
 plt.show()
-
