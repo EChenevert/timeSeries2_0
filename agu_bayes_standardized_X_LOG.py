@@ -137,7 +137,7 @@ udf.drop(udf.index[udf['Community'] == 'Swamp'], inplace=True)
 # udf.drop(udf.index[udf['Basins'] == 'Unammed_basin'], inplace=True)
 udf = udf.drop('Basins', axis=1)
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop(['Community', 'Latitude', 'Longitude'], axis=1), thres=2.6)
+rdf = funcs.outlierrm(udf.drop(['Community', 'Latitude', 'Longitude'], axis=1), thres=3)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
 rdf['log_distance_to_water_km'] = [np.log(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
@@ -159,7 +159,7 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)', 'Soil Salinity (ppt)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
     # Delete the dominant herb
-    # 'Average Height Herb (cm)',
+    'Average Height Herb (cm)',
     # other weird ones
     'Soil Porewater Temperature (°C)',
     'Average_Marsh_Elevation (ft. NAVD88)',
@@ -208,7 +208,7 @@ predictors_scaled = pd.DataFrame(scalar_Xwhole.fit_transform(phi), columns=phi.c
 #
 # bestfeatures = list(efsmlr.best_feature_names_)
 
-bestfeatures = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=10,
+bestfeatures = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=20,
                                           significance_level=0.05)
 
 # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
@@ -277,7 +277,8 @@ for i in range(100):  # for 100 repeates
         weight_vector_ls.append(abs(weights))  # Take the absolute values of weights for relative feature importance
         regularizor = baymod.lambda_ / baymod.alpha_
         regularizor_ls.append(regularizor)
-        eigs = np.linalg.eigh(baymod.sigma_)
+        design_m = np.asarray(X_train)
+        eigs = np.linalg.eigh(baymod.lambda_ * (design_m.T @ design_m))
         weight_certainty = []
         for eig in eigs[0]:
             weight_certainty.append(eig/(eig + baymod.lambda_))
@@ -416,8 +417,8 @@ for key in marshdic:
     #
     # bestfeaturesM = list(efsmlr.best_feature_names_)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=6,
-                                               significance_level=0.06)
+    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=20,
+                                               significance_level=0.05)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
     #### NOTE: I should do separate tests to determine which split of the data is optimal ######
@@ -530,7 +531,8 @@ for key in marshdic:
             weight_vector_ls.append(abs(weights))  # Take the absolute values of weights for relative feature importance
             regularizor = baymod.lambda_ / baymod.alpha_
             regularizor_ls.append(regularizor)
-            eigs = np.linalg.eigh(baymod.sigma_)
+            design_m = np.asarray(X_train)
+            eigs = np.linalg.eigh(baymod.alpha_ * (design_m.T @ design_m))
             weight_certainty = []
             for eig in eigs[0]:
                 weight_certainty.append(eig / (eig + baymod.lambda_))

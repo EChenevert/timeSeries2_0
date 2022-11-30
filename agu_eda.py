@@ -132,7 +132,7 @@ udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', 'Soi
 udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
 
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop(['Community', 'Basins'], axis=1), thres=2.6)
+rdf = funcs.outlierrm(udf.drop(['Community', 'Basins'], axis=1), thres=3)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
 # rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
@@ -555,4 +555,21 @@ oceantemp = sns.jointplot(data=gdf,
 oceantemp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\oceantemp.png", dpi=300)
 plt.show()
 
-## Looking at the average height of the dominant hern vs
+
+
+### Fit lines to ndvi and accretion
+plt.figure()
+# Fit with polyfit
+x_sal = np.asarray(gdf[gdf['Community'] == 'Saline']['NDVI'])
+y_sal = np.asarray(gdf[gdf['Community'] == 'Saline']['Accretion Rate (mm/yr)'])
+x_fresh = np.asarray(gdf[gdf['Community'] == 'Freshwater']['NDVI'])
+y_fresh = np.asarray(gdf[gdf['Community'] == 'Freshwater']['Accretion Rate (mm/yr)'])
+b_sal, m_sal = np.polyfit(x_sal, y_sal, 1)
+b_fresh, m_fresh = np.polyfit(x_fresh, y_fresh, 1)
+plt.scatter(x_sal, y_sal)
+plt.scatter(x_fresh, y_fresh)
+plt.plot(x_sal, b_sal + m_sal * x_sal, '-', label='Saline')
+plt.plot(x_fresh, b_fresh + m_fresh * x_fresh, '-', label='Saline')
+plt.legend()
+plt.show()
+

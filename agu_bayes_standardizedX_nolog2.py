@@ -137,7 +137,7 @@ udf.drop(udf.index[udf['Community'] == 'Swamp'], inplace=True)
 # udf.drop(udf.index[udf['Basins'] == 'Unammed_basin'], inplace=True)
 udf = udf.drop('Basins', axis=1)
 # conduct outlier removal which drops all nans
-rdf = funcs.outlierrm(udf.drop(['Community', 'Latitude', 'Longitude'], axis=1), thres=2.6)
+rdf = funcs.outlierrm(udf.drop(['Community', 'Latitude', 'Longitude'], axis=1), thres=3)
 
 # transformations (basically log transforamtions) --> the log actually kinda regularizes too
 rdf['log_distance_to_water_km'] = [np.log10(val) if val > 0 else 0 for val in rdf['distance_to_water_km']]
@@ -156,10 +156,11 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
     'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)', 'Soil Salinity (ppt)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
-    # 'Soil Porewater Temperature (°C)',
+    'Soil Porewater Temperature (°C)',
+    'Average Height Dominant (cm)',
     'Average_Marsh_Elevation (ft. NAVD88)',
     'Bulk Density (g/cm3)',  'Organic Density (g/cm3)',
-    'Soil Moisture Content (%)',  #  'Organic Matter (%)',
+    'Soil Moisture Content (%)',  'Organic Matter (%)',
     'land_lost_km2'
 ], axis=1)
 
@@ -339,14 +340,14 @@ fig, ax = plt.subplots(figsize=(6, 4))
 hb = ax.hexbin(x=y_ls,
                y=predicted,
                gridsize=30, edgecolors='grey',
-               cmap='YlGnBu', mincnt=1)
+               cmap='YlOrRd', mincnt=1)
 ax.set_facecolor('white')
 ax.set_xlabel("Measured")
 ax.set_ylabel("Estimated")
 ax.set_title("All Sites: 100x Repeated 5-fold CV")
 cb = fig.colorbar(hb, ax=ax)
 ax.plot([y.min(), y.max()], [y.min(), y.max()],
-    "k--", lw=3)
+    "r--", lw=3)
 
 ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
             bbox=dict(boxstyle='round', fc='w'),
@@ -360,7 +361,7 @@ ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 195), xycoor
 # ax.annotate("Median MAE Unscaled = {:.3f}".format(mae_inv_final_median), xy=(20, 195), xycoords='axes points',
 #             bbox=dict(boxstyle='round', fc='w'),
 #             size=8, ha='left', va='top')
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\all_sites_scaledX_nolog_cv.png", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\all_sites_scaledX_nolog_cv_human.png", dpi=500,
             bbox_inches='tight')
 plt.show()
 
@@ -590,7 +591,7 @@ for key in marshdic:
     hb = ax.hexbin(x=y_ls,
                    y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlGnBu', mincnt=1)
+                   cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
@@ -599,7 +600,7 @@ for key in marshdic:
     ax.plot(
         [y.min(), y.max()],
         [y.min(), y.max()],
-        "k--", lw=3)
+        "r--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -614,7 +615,7 @@ for key in marshdic:
     #             bbox=dict(boxstyle='round', fc='w'),
     #             size=8, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_nolog_cv.png",
+                "_scaledX_nolog_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -844,7 +845,7 @@ for key in logdfs:
                    x=y_ls,
                    y=predicted,
                    gridsize=30, edgecolors='grey',
-                   cmap='YlGnBu', mincnt=1)
+                   cmap='YlOrRd', mincnt=1)
     ax.set_facecolor('white')
     ax.set_xlabel("Measured")
     ax.set_ylabel("Estimated")
@@ -853,7 +854,7 @@ for key in logdfs:
     ax.plot(
         [y.min(), y.max()],
         [y.min(), y.max()],
-             "k--", lw=3)
+             "r--", lw=3)
 
     ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 210), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
@@ -868,7 +869,7 @@ for key in logdfs:
     #             bbox=dict(boxstyle='round', fc='w'),
     #             size=8, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_logy_cv.png",
+                "_scaledX_logy_cv_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -893,7 +894,7 @@ for key in hold_marsh_weights:
     # sns.catplot(data=hold_marsh_weights[key], kind="swarm", palette="ch:.25")
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(key) +
-                "_scaledX_nolog_boxplot.png",
+                "_scaledX_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -907,7 +908,7 @@ for key in hold_unscaled_weights:
     boxplot = sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")
     funcs.wrap_labels(ax, 10)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\" + str(
-        key) + "_unscaledWeights_nolog_boxplot.png",
+        key) + "_unscaledWeights_nolog_boxplot_human.png",
                 dpi=500,
                 bbox_inches='tight')
     plt.show()
@@ -937,7 +938,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\regularization_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\regularization_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -951,7 +952,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\certainty_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
@@ -966,7 +967,7 @@ ax.set_title('Distribution of Intercepts [Unscaled]:')
 ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\intercepts_nolog_boxplot.png", dpi=500, bbox_inches='tight')
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\intercepts_nolog_boxplot_human.png", dpi=500, bbox_inches='tight')
 plt.show()
 
 
@@ -978,7 +979,7 @@ fig, ax = plt.subplots()
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\pred_certainty_scaledX_nolog_boxplot.png",
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_nolog\\pred_certainty_scaledX_nolog_boxplot_human.png",
             dpi=500,
             bbox_inches='tight')
 plt.show()
