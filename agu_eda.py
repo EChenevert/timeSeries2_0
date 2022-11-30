@@ -185,7 +185,7 @@ interdf = gdf[gdf['Community'] == 'Intermediate']
 # Exclude swamp
 marshdic = {'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf}
 
-
+sns.set_context('poster', font_scale=0.6)
 # EDA All Sites
 # Extract the highlighted variables
 # data = gdf['Bulk']
@@ -292,7 +292,7 @@ f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_
 # Lets check out the relationship between subsidence and accretion: Definetly a positive relationship here
 plt.figure()
 jp = sns.jointplot(data=gdf, x='Accretion Rate (mm/yr)', y='Shallow Subsidence Rate (mm/yr)',
-                   hue='Predominantly Mineral or Peat',
+                   hue='Mineral or Peat Soil',
                    palette='rocket')
 plt.show()
 jp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\ss_and_va_jp.png", dpi=300)
@@ -310,10 +310,22 @@ sns.histplot(data=gdf, ax=ax, stat="count", multiple="stack",
              x="Accretion Rate (mm/yr)", kde=False,
              hue="Community", #palette="pastel",
              element="bars", legend=True)
-ax.set_title("Seaborn Stacked Histogram")
+ax.set_title("Distribution of Accretion Rates")
 ax.set_xlabel("Accretion Rate (mm/yr)")
 ax.set_ylabel("Count")
 f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\stacked_accretion.png", dpi=300)
+plt.show()
+
+f = plt.figure(figsize=(7, 5))
+ax = f.add_subplot(1, 1, 1)
+sns.histplot(ax=ax, stat="count", multiple="stack",
+             x=np.log(gdf["Accretion Rate (mm/yr)"]), kde=False,
+             hue=gdf["Community"], #palette="pastel",
+             element="bars", legend=True)
+ax.set_title("Log Distribution of Accretion Rates")
+ax.set_xlabel("Accretion Rate (mm/yr)")
+ax.set_ylabel("Count")
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\stacked_log_accretion.png", dpi=300)
 plt.show()
 
 # Maybe the source of increased accretion in terrebonne is due to reworking from land lost
@@ -381,6 +393,37 @@ jpndvi = sns.jointplot(data=gdf[(gdf['Community'] == 'Saline') | (gdf['Community
                 x='Soil Porewater Salinity (ppt)', y='Accretion Rate (mm/yr)', hue='Community', palette="rocket")
 jpndvi.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\salinity_freshandsal.png", dpi=300)
 plt.show()
+
+
+## Looking at the average height of the dominant veg versus the height of the herb
+
+plt.figure(figsize=(9, 9))
+brackdomherb = sns.scatterplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Dominant (cm)',
+                             y='Average Height Herb (cm)', hue='Basins')
+# brackdomherb.legend(loc='best')
+# sns.move_legend(brackdomherb, "upper left", bbox_to_anchor=(1, 1))
+# brackdomherb.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\brackdomhern.png", dpi=300)
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\brackdomhern.png", dpi=300)
+plt.show()
+
+plt.figure(figsize=(9, 9))
+brackdomacc = sns.scatterplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Dominant (cm)',
+                             y='Accretion Rate (mm/yr)', hue='Basins')
+# brackdomacc.legend(loc='best')
+# sns.move_legend(brackdomacc, "upper left", bbox_to_anchor=(1, 1))
+# brackdomacc.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\brackdomacc.png", dpi=300)
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\brackdomacc.png", dpi=300)
+plt.show()
+
+plt.figure(figsize=(9, 9))
+brackherbacc = sns.scatterplot(data=gdf[gdf['Community'] == 'Brackish'], x='Average Height Herb (cm)',
+                             y='Accretion Rate (mm/yr)', hue='Basins')
+# brackherbacc.legend(loc='best')
+# sns.move_legend(brackherbacc, "upper left", bbox_to_anchor=(1, 1))
+# brackherbacc.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\brackhernacc.png", dpi=300)
+plt.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\brackhernacc.png", dpi=300)
+plt.show()
+
 
 plt.figure()
 domveg = sns.jointplot(data=gdf, x='Average Height Dominant (cm)', y='Accretion Rate (mm/yr)', hue='Community')
@@ -511,3 +554,5 @@ oceantemp = sns.jointplot(data=gdf,
                 x='distance to ocean km', y='Soil Porewater Temperature (°C)', hue='Community')
 oceantemp.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\oceantemp.png", dpi=300)
 plt.show()
+
+## Looking at the average height of the dominant hern vs
