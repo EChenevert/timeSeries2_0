@@ -117,6 +117,7 @@ else:
 ####### Define outcome as vertical component
 outcome = vertical
 
+udf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset_noOutlierRm.csv")
 # Try to semi-standardize variables
 des = udf.describe()  # just to identify which variables are way of the scale
 udf['distance_to_river_km'] = udf['distance_to_river_m']/1000  # convert to km
@@ -377,6 +378,7 @@ plt.show()
 gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude']]], axis=1, join='inner')
 # Export gdf to file specifically for AGU data and results
 gdf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv")
+
 # split into marsh datasets
 
 brackdf = gdf[gdf['Community'] == 'Brackish']
