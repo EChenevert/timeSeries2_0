@@ -324,7 +324,9 @@ sns.histplot(ax=ax, stat="count", multiple="stack",
              element="bars", legend=True)
 ax.set_title("Log Distribution of Accretion Rates")
 ax.set_xlabel("Accretion Rate (mm/yr)")
+ax.set_xscale('log')
 ax.set_ylabel("Count")
+
 f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_forscaledXY\\stacked_log_accretion.png", dpi=300)
 plt.show()
 

@@ -237,7 +237,7 @@ weight_certainty_ls = []
 prediction_certainty_ls = []
 
 for i in range(100):  # for 100 repeates
-    try_cv = KFold(n_splits=3, shuffle=True)
+    try_cv = KFold(n_splits=5, shuffle=True)
     results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
                                        scoring=('r2', 'neg_mean_absolute_error'),
                                        n_jobs=-1, return_estimator=True)
