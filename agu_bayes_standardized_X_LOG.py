@@ -248,7 +248,7 @@ regularizor_ls = []
 weight_certainty_ls = []
 prediction_certainty_ls = []
 
-for i in range(100):  # for 100 repeates
+for i in range(200):  # for 100 repeates
     try_cv = KFold(n_splits=5, shuffle=True)
     results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
                                        scoring=('r2', 'neg_mean_absolute_error'),
@@ -270,7 +270,7 @@ for i in range(100):  # for 100 repeates
         # collect unscaled parameters
         unscaled_weights, intercept = funcs.unscaled_weights_from_Xstandardized(phi[bestfeatures], baymod)
         # log transform
-        unscaled_weights = funcs.log_transform_weights(unscaled_weights)
+        unscaled_weights = funcs.log10_transform_weights(unscaled_weights)
 
         unscaled_w_ls.append(unscaled_weights)
 
@@ -518,7 +518,7 @@ for key in marshdic:
     weight_certainty_ls = []
     prediction_certainty_ls = []
 
-    for i in range(100):  # for 100 repeates
+    for i in range(200):  # for 100 repeates
         try_cv = KFold(n_splits=5, shuffle=True)
         results_for_3fold = cross_validate(baymod, X, y.values.ravel(), cv=try_cv,
                                            scoring=('r2', 'neg_mean_absolute_error'),
