@@ -166,6 +166,8 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     # Delete the dominant herb cuz of rendundancy with dominant veg
     'Average Height Herb (cm)',
     # 'tss med mg/l',  # cuz idk if i trust calc..... eh
+    'std_deviation_avg_flooding (ft)',  # cuz idk how it differs from tide amp, is diff correlated as well from SHAP
+    '10%thLower_flooding (ft)',  # same reason as above
     # other weird ones
     'Soil Porewater Temperature (°C)',
     'Average_Marsh_Elevation (ft. NAVD88)',
