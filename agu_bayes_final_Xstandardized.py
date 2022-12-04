@@ -28,7 +28,8 @@ perc = pd.read_csv(r"D:\Etienne\fall2022\agu_data\percentflooded.csv",
 perc['Simple site'] = [i[:8] for i in perc['Station_ID']]
 perc = perc.groupby('Simple site').median()
 wl = pd.read_csv(r"D:\Etienne\fall2022\agu_data\waterlevelrange.csv",
-                 encoding="unicode escape")
+                 encoding="unicode escape")[['Station_ID', 'Tide_Amp (ft)', '10%thLower_flooding (ft)',
+                                             '90%thUpper_flooding (ft)', 'avg_flooding (ft)']]
 wl['Simple site'] = [i[:8] for i in wl['Station_ID']]
 wl = wl.groupby('Simple site').median()
 
@@ -56,12 +57,19 @@ distRiver = pd.read_csv(r"D:\Etienne\fall2022\CRMS_data\totalDataAndRivers.csv",
 nearWater = pd.read_csv(r"D:\Etienne\fall2022\agu_data\ALLDATA2.csv", encoding="unicode_escape")[
     ['Simple site', 'Distance_to_Water_m']  # 'Distance_to_Ocean_m'
 ].set_index('Simple site')
+# Add flooding frequency
 floodfreq = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\floodFrequencySitePerYear.csv", encoding="unicode_escape")[[
     'Simple site', 'Flood Freq (Floods/yr)'
 ]].set_index('Simple site')
+# add flood depth when flooded
+floodDepth = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\floodDepthSitePerYear.csv", encoding="unicode_escape")[[
+    'Simple site', 'Avg. Flood Depth when Flooded (ft)', '90th Percentile Flood Depth when Flooded (ft)',
+    '10th Percentile Flood Depth when Flooded (ft)', 'Std. Deviation Flood Depth when Flooded '
+]].set_index('Simple site')
 
 # Concatenate
-df = pd.concat([bysite, distRiver, nearWater, gee, jrc, marshElev, wl, perc, SEC, acc, floodfreq], axis=1, join='outer')
+df = pd.concat([bysite, distRiver, nearWater, gee, jrc, marshElev, wl, perc, SEC, acc, floodfreq, floodDepth],
+               axis=1, join='outer')
 
 # Now clean the columns
 # First delete columns that are more than 1/2 nans
@@ -75,8 +83,9 @@ udf = tdf.drop([
     'Delta Time (decimal_years)', 'Wet Soil pH (pH units)', 'Dry Soil pH (pH units)', 'Dry Volume (cm3)',
     'Measurement Depth (ft)', 'Plot Size (m2)', '% Cover Shrub', '% Cover Carpet', 'Direction (Collar Number)',
     'Direction (Compass Degrees)', 'Pin Number', 'Observed Pin Height (mm)', 'Verified Pin Height (mm)',
-    'calendar_year', 'percent_waterlevel_complete',
+    'percent_waterlevel_complete',  # 'calendar_year',
     'Average Height Shrub (cm)', 'Average Height Carpet (cm)'  # I remove these because most values are nan and these vars are unimportant really
+
 ], axis=1)
 
 
@@ -160,14 +169,18 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
     'Shallow Subsidence Rate (mm/yr)',  # potentially encoding info about accretion
     # taking out water level features because they are not super informative
     # Putting Human in the loop
-    '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
-    'std_deviation_water_level(ft NAVD88)', 'Staff Gauge (ft)', 'Soil Salinity (ppt)',
+    # '90th%Upper_water_level (ft NAVD88)', '10%thLower_water_level (ft NAVD88)', 'avg_water_level (ft NAVD88)',
+    # 'std_deviation_water_level(ft NAVD88)',
+    'Staff Gauge (ft)', 'Soil Salinity (ppt)',
     'log_river_width_mean_km',  # i just dont like this variable because it has a sucky distribution
     # Delete the dominant herb cuz of rendundancy with dominant veg
     'Average Height Herb (cm)',
     # 'tss med mg/l',  # cuz idk if i trust calc..... eh
-    'std_deviation_avg_flooding (ft)',  # cuz idk how it differs from tide amp, is diff correlated as well from SHAP
-    '10%thLower_flooding (ft)',  # same reason as above
+    # # Taking these flood depth variables out becuase I compute them myself better!!!!
+    # 'std_deviation_avg_flooding (ft)',  # cuz idk how it differs from tide amp, is diff correlated as well from SHAP
+    'avg_flooding (ft)',  # remove because I now calcuate flooding depth when flooded
+    '10%thLower_flooding (ft)',  # same reason as above AND i compute myself
+    '90%thUpper_flooding (ft)',
     # other weird ones
     'Soil Porewater Temperature (°C)',
     'Average_Marsh_Elevation (ft. NAVD88)',
@@ -185,10 +198,14 @@ rdf = rdf.rename(columns={
     # 'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
     'log_distance_to_water_km': 'Log Distance to Water (km)',
     'log_distance_to_river_km': 'Log Distance to River (km)',
-    '10%thLower_flooding (ft)': '10th Percentile of Flooding (ft)',
-    '90%thUpper_flooding (ft)': '90th Percentile of Flooding (ft)',
-    'avg_flooding (ft)': 'Avg. Flooding (ft)',
-    'std_deviation_avg_flooding (ft)': 'Std. Deviation of Flooding (ft)'
+    '10%thLower_flooding (ft)': '10th Percentile of Waterlevel to Marsh (ft)',
+    '90%thUpper_flooding (ft)': '90th Percentile of Waterlevel to Marsh (ft)',
+    'avg_flooding (ft)': 'Avg. Waterlevel to Marsh (ft)',
+    'std_deviation_avg_flooding (ft)': 'Std. Deviation of Flooding (ft)',
+    # My flood depth vars
+    '90th Percentile Flood Depth when Flooded (ft)': '90th Percentile Flood Depth (ft)',
+    '10th Percentile Flood Depth when Flooded (ft)': '10th Percentile Flood Depth (ft)',
+    'Avg. Flood Depth when Flooded (ft)': 'Avg. Flood Depth (ft)'
 })
 
 gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude']]], axis=1, join='inner')
@@ -202,9 +219,10 @@ saldf = gdf[gdf['Community'] == 'Saline']
 freshdf = gdf[gdf['Community'] == 'Freshwater']
 interdf = gdf[gdf['Community'] == 'Intermediate']
 combined = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Brackish')]
+freshinter = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Freshwater')]
 # Exclude swamp
 marshdic = {'All': gdf, 'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
-            'Intermediate and Brackish': combined}
+            'Intermediate and Brackish': combined, 'Freshwater and Intermediate': freshinter}
 
 
 hold_marsh_weights = {}
@@ -223,28 +241,32 @@ for key in marshdic:
     # Scale: because I want feature importances
     scalar_Xmarsh = StandardScaler()
     predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
-    # # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-    # mlr = linear_model.LinearRegression()
-    # br = linear_model.BayesianRidge(fit_intercept=False)
-    #
-    # feature_selector = ExhaustiveFeatureSelector(br,
-    #                                                  min_features=1,
-    #                                                  max_features=3,
-    #                                                  # I should only use 5 features (15 takes waaaaay too long)
-    #                                                  scoring='neg_root_mean_squared_error',
-    #                                                  # print_progress=True,
-    #                                                  cv=3)  # 5 fold cross-validation
-    #
-    # efsmlr = feature_selector.fit(predictors_scaled, target_scaled.values.ravel())  # these are not scaled... to reduce data leakage
-    #
-    # print('Best CV r2 score: %.2f' % efsmlr.best_score_)
-    # print('Best subset (indices):', efsmlr.best_idx_)
-    # print('Best subset (corresponding names):', efsmlr.best_feature_names_)
-    #
-    # bestfeaturesM = list(efsmlr.best_feature_names_)
+    # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
+    br = linear_model.BayesianRidge(fit_intercept=True)
 
-    bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=20,
-                                               significance_level=0.05)
+    feature_selector = ExhaustiveFeatureSelector(br,
+                                                     min_features=1,
+                                                     max_features=len(phi.columns.values),
+                                                     # I should only use 5 features (15 takes waaaaay too long)
+                                                     scoring='neg_mean_absolute_error',
+                                                     # print_progress=True,
+                                                     cv=3)  # 3 fold cross-validation
+
+    efsmlr = feature_selector.fit(predictors_scaled, t.values.ravel())
+
+    print('Best CV r2 score: %.2f' % efsmlr.best_score_)
+    print('Best subset (indices):', efsmlr.best_idx_)
+    print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+
+    # if key == 'Freshwater':
+    #     bestfeaturesM = ['TSS (mg/l)', 'NDVI', 'Tide Amp (ft)']
+    # else:
+    #     bestfeaturesM = list(efsmlr.best_feature_names_)
+
+    bestfeaturesM = list(efsmlr.best_feature_names_)
+
+    # bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=100,
+    #                                            significance_level=0.01)
 
     # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
     #### NOTE: I should do separate tests to determine which split of the data is optimal ######
@@ -272,10 +294,14 @@ colormap = {
 'TSS (mg/l)': '#8E6C02',
 'Windspeed': '#70ECE3',
 'Tide Amp (ft)': '#434F93',
-'Avg. Flooding (ft)': '#087AFA',
-'90th Percentile of Flooding (ft)': '#D000E1',
-'10th Percentile of Flooding (ft)': '#73ABAE',
-'Std. Deviation of Flooding (ft)': '#DE5100',
+'Avg. Flood Depth (ft)': '#087AFA',
+'Avg. Waterlevel to Marsh (ft)':  '#087AFD',
+'90th Percentile of Waterlevel to Marsh (ft)': '#D001A1',
+'90th Percentile Flood Depth (ft)': '#D000E1',
+'10th Percentile of Waterlevel to Marsh (ft)': '#73ABAE',
+'10th Percentile Flood Depth (ft)': '#73ACAE',
+# 'Std. Deviation of Flooding (ft)': '#DE5100',
+'Std. Deviation Flood Depth when Flooded ': '#DE5100',
 'Avg. Time Flooded (%)': '#970CBD',
 'Flood Freq (Floods/yr)': '#EB0000',
 'Log Distance to Water (km)': '#442929',
@@ -284,7 +310,7 @@ colormap = {
 
 for key in hold_marsh_weights:
     d = pd.DataFrame(hold_marsh_weights[key].mean().reset_index()).rename(columns={0: 'Means'})
-    sns.set_theme(style='white', font_scale=1.4)
+    sns.set_theme(style='white', font_scale=1)
     fig, ax = plt.subplots(figsize=(7, 7))
     # my_cmap = plt.get_cmap("cool")
     # ax.bar(list(d['index']), list(d['Means']), color='Blue')
@@ -304,12 +330,13 @@ for key in hold_marsh_weights:
 
 # Plot the distribution of weight parameters for the marsh runs
 for key in hold_unscaled_weights:
-    sns.set_theme(style='white', font_scale=1.4)
+    sns.set_theme(style='white', font_scale=1)
     fig, ax = plt.subplots(figsize=(7, 7))
     # matplotlib.rcParams['pdf.fonttype'] = 42
     ax.set_title(str(key) + " Sites")
-    if key != 'Saline':
-        ax.axhline(0, ls='--')
+    ax.axhline(0, ls='--')
+    # if key != 'Saline':
+    #     ax.axhline(0, ls='--')
     palette_ls = []
     for weight in hold_unscaled_weights[key].keys():
         palette_ls.append(colormap[weight])
