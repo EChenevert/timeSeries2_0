@@ -228,6 +228,7 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
     exp10_y_ls = [10 ** y_i for y_i in y_ls]
     exp10_predicted = [10 ** y_i for y_i in predicted]
 
+    plt.rcParams.update({'font.size': 15})
     fig, ax = plt.subplots(figsize=(9, 9))
     hb = ax.hexbin(x=exp10_y_ls,
                    y=exp10_predicted,
@@ -238,7 +239,7 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
     ax.set_ylabel("Measured Accretion Rate (mm/yr)")
     ax.set_title(marsh_key + " Sites: 100x Repeated 5-fold CV")
     cb = fig.colorbar(hb, ax=ax)
-    cb.ax.get_yaxis().labelpad = 15
+    cb.ax.get_yaxis().labelpad = 20
     cb.set_label('Density of Predictions', rotation=270)
 
     exp10_y = 10 ** target
@@ -258,11 +259,31 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
                 bbox_inches='tight')
     plt.show()
 
-    return {
+
+    # save all results in a dictionary
+    dictionary = {
         "Scaled Weights": weight_df, "Unscaled Weights": unscaled_weight_df, "Unscaled Intercepts": intercept_ls,
         "Scaled regularizors": regularizor_ls, "# Well Determined Weights": weight_certainty_ls,
         "Standard Deviations of Predictions": prediction_certainty_ls, "Predictions": prediction_list,
         "Residuals": residuals, "Predicted for Residuals": predicted
     }
+
+    # lets just look at the residuals.... why not???
+    fig, ax = plt.subplots(figsize=(9, 7))
+    hb = ax.hexbin(x=dictionary['Predicted for Residuals'],
+                   y=dictionary['Residuals'],
+                   gridsize=30, edgecolors='grey',
+                   cmap='YlGnBu', mincnt=1)
+    ax.set_facecolor('white')
+    ax.set_xlabel("Fitted Value (Prediction)")
+    ax.set_ylabel("Residual (y_true - y_predicted)")
+    ax.set_title(marsh_key)
+    cb = fig.colorbar(hb, ax=ax)
+    cb.ax.get_yaxis().labelpad = 15
+    cb.set_label('Density of Residuals', rotation=270)
+    ax.axhline(0.0, linestyle='--')
+    plt.show()
+
+    return dictionary
 
 

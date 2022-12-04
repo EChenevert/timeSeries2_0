@@ -135,7 +135,7 @@ udf = udf.drop(['distance_to_river_m', 'width_mean', 'Distance_to_Water_m', #  '
                 'Soil Specific Conductance (uS/cm)',
                 'Soil Porewater Specific Conductance (uS/cm)',
                 'Land_Lost_m2'], axis=1)
-udf = udf.rename(columns={'tss_med': 'tss med mg/l'})
+udf = udf.rename(columns={'tss_med': 'TSS (mg/l)'})
 
 # Delete the swamp sites and unammed basin
 udf.drop(udf.index[udf['Community'] == 'Swamp'], inplace=True)
@@ -177,15 +177,16 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 # Rename some variables for better text wrapping
 rdf = rdf.rename(columns={
     'Tide_Amp (ft)': 'Tide Amp (ft)',
-    'avg_percentflooded (%)': ' avg percent flooded (%)',
+    'avg_percentflooded (%)': 'Avg. Time Flooded (%)',
+    'windspeed': 'Windspeed',
     # 'log_distance_to_ocean_km': 'log distance to ocean km',
     # 'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
-    'log_distance_to_water_km': 'log distance to water km',
-    'log_distance_to_river_km': 'log distance to river km',
-    '10%thLower_flooding (ft)': '10%thLower flooding (ft)',
-    '90%thUpper_flooding (ft)': '90%thUpper flooding (ft)',
-    'avg_flooding (ft)': 'avg flooding (ft)',
-    'std_deviation_avg_flooding (ft)': 'std dev avg flooding (ft)'
+    'log_distance_to_water_km': 'Log Distance to Water (km)',
+    'log_distance_to_river_km': 'Log Distance to River (km)',
+    '10%thLower_flooding (ft)': '10th Percentile of Flooding (ft)',
+    '90%thUpper_flooding (ft)': '90th Percentile of Flooding (ft)',
+    'avg_flooding (ft)': 'Avg. Flooding (ft)',
+    'std_deviation_avg_flooding (ft)': 'Std. Deviation of Flooding (ft)'
 })
 
 gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude']]], axis=1, join='inner')
@@ -200,7 +201,7 @@ freshdf = gdf[gdf['Community'] == 'Freshwater']
 interdf = gdf[gdf['Community'] == 'Intermediate']
 combined = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Brackish')]
 # Exclude swamp
-marshdic = {'All': gdf,'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
+marshdic = {'All': gdf, 'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
             'Intermediate and Brackish': combined}
 
 
@@ -266,23 +267,23 @@ colormap = {
 'Soil Porewater Salinity (ppt)': '#DD8A8A',
 'Average Height Dominant (cm)': '#137111',
 'NDVI': '#0AFF06',
-'tss med mg/l': '#8E6C02',
-'windspeed': '#70ECE3',
+'TSS (mg/l)': '#8E6C02',
+'Windspeed': '#70ECE3',
 'Tide Amp (ft)': '#434F93',
-'avg flooding (ft)': '#087AFA',
-'90%thUpper flooding (ft)': '#D000E1',
-'10%thLower flooding (ft)': '#73ABAE',
-'std dev avg flooding (ft)': '#DE5100',
-' avg percent flooded (%)': '#970CBD',
+'Avg. Flooding (ft)': '#087AFA',
+'90th Percentile of Flooding (ft)': '#D000E1',
+'10th Percentile of Flooding (ft)': '#73ABAE',
+'Std. Deviation of Flooding (ft)': '#DE5100',
+'Avg. Time Flooded (%)': '#970CBD',
 'Flood Freq (Floods/yr)': '#EB0000',
-'log distance to water km': '#442929',
-'log distance to river km': '#045F38',
+'Log Distance to Water (km)': '#442929',
+'Log Distance to River (km)': '#045F38',
 }
 
 for key in hold_marsh_weights:
     d = pd.DataFrame(hold_marsh_weights[key].mean().reset_index()).rename(columns={0: 'Means'})
-    # sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
-    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.set_theme(style='white', font_scale=1.4)
+    fig, ax = plt.subplots(figsize=(7, 7))
     # my_cmap = plt.get_cmap("cool")
     # ax.bar(list(d['index']), list(d['Means']), color='Blue')
     ax.set_title(str(key) + " Sites")
@@ -301,8 +302,8 @@ for key in hold_marsh_weights:
 
 # Plot the distribution of weight parameters for the marsh runs
 for key in hold_unscaled_weights:
-    sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
-    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.set_theme(style='white', font_scale=1.4)
+    fig, ax = plt.subplots(figsize=(7, 7))
     # matplotlib.rcParams['pdf.fonttype'] = 42
     ax.set_title(str(key) + " Sites")
     if key != 'Saline':
@@ -322,8 +323,7 @@ for key in hold_unscaled_weights:
 
 # Plot the distribution of the eff_reg parameter for each run
 eff_reg_df = pd.DataFrame(hold_marsh_regularizors)
-sns.set_theme(style='white', rc={'figure.dpi': 147},
-              font_scale=0.7)
+sns.set_theme(style='white', font_scale=1)
 fig, ax = plt.subplots(figsize=(6, 4))
 # matplotlib.rcParams['pdf.fonttype'] = 42
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
