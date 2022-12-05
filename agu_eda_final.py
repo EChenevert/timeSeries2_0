@@ -47,7 +47,7 @@ tss = np.asarray(df['TSS (mg/l)'])
 
 fig2, ax2 = plt.subplots(figsize=(8, 6))
 scat2 = ax2.scatter(tss, all_acc, c=bulk, cmap="rocket_r", s=50*10**bulk)
-cbar = fig2.colorbar(scat, ticks=[np.min(bulk), np.max(bulk)])
+cbar = fig2.colorbar(scat2, ticks=[np.min(bulk), np.max(bulk)])
 cbar.ax.set_yticklabels([round(np.min(bulk), 2), round(np.max(bulk), 2)])# vertically oriented colorbar
 cbar.ax.get_yaxis().labelpad = 10
 cbar.set_label('Bulk Density (g/cm3)', rotation=270)
@@ -65,7 +65,7 @@ fig2.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\tss_accre
 
 
 # Part 2. NDVI Looking specifically at difference between Freshwater + Intermediate and Saline Marshes
-# Say that there is a clear difference
+# Say that there is a clear difference between ndvi in saline marsh and fresh-inter marshes
 for_part2 = df[(df['Community'] == 'Saline') | (df['Community'] == 'Freshwater') | (df['Community'] == 'Intermediate')]
 
 sns.set_theme(style='white', font_scale=1.4)
@@ -73,7 +73,7 @@ f = plt.figure(figsize=(8, 6))
 ax = f.add_subplot(1, 1, 1)
 sns.histplot(ax=ax, stat="count", multiple="stack", bins=30,
              x=for_part2['NDVI'], kde=False,
-             hue=for_part2["Community"], palette="deep",
+             hue=for_part2["Community"], palette=["Red", "Orange", "Purple"],
              element="bars", legend=True)
 ax.set_title("Log Distribution of Accretion Rates")
 ax.set_xlabel("NDVI")
@@ -83,9 +83,58 @@ plt.show()
 f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\ndvi_histogram.eps",
           dpi=300, format="eps")
 
+# say there is a clear difference in the salinity between saline and fresh-inter marshes
+sns.set_theme(style='white', font_scale=1.4)
+f = plt.figure(figsize=(8, 6))
+ax = f.add_subplot(1, 1, 1)
+sns.histplot(ax=ax, stat="count", multiple="stack", bins=30,
+             x=for_part2['Soil Porewater Salinity (ppt)'], kde=False,
+             hue=for_part2["Community"], palette=["Red", "Orange", "Purple"],
+             element="bars", legend=True)
+ax.set_title("Log Distribution of Accretion Rates")
+ax.set_xlabel('Soil Porewater Salinity (ppt)')
+ax.set_ylabel("Count")
+f.subplots_adjust(bottom=0.2)
+plt.show()
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\salinity_histogram.eps",
+          dpi=300, format="eps")
+
+# Show interesting relationship with NDVI and accretion and say that it is related to difference in flooding regimes
+flooding = np.asarray(for_part2['Avg. Flood Depth (ft)'])
+ndvi = np.asarray(for_part2['NDVI'])
+part2_acc = np.asarray(for_part2['Accretion Rate (mm/yr)'])
+
+fig2, ax2 = plt.subplots(figsize=(8, 6))
+scat2 = ax2.scatter(ndvi, part2_acc, c=flooding, cmap="rocket_r", s=50*5**flooding)
+cbar = fig2.colorbar(scat2, ticks=[np.min(flooding), np.max(flooding)])
+cbar.ax.set_yticklabels([round(np.min(flooding), 2), round(np.max(flooding), 2)])# vertically oriented colorbar
+cbar.ax.get_yaxis().labelpad = 10
+cbar.set_label('Avg. Flood Depth (ft)', rotation=270)
+
+ax2.set_ylabel('Accretion Rate (mm/yr)')
+ax2.set_xlabel('NDVI')
+# plt.legend()
+plt.show()
+fig2.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\ndvi_accretion.eps",
+            dpi=300, format="eps")
 
 
+# Say that this is likely due to the salinity flooding brings
+salinity = np.asarray(for_part2['Soil Porewater Salinity (ppt)'])
 
+fig2, ax2 = plt.subplots(figsize=(8, 6))
+scat2 = ax2.scatter(salinity, flooding, c=part2_acc, cmap="rocket_r", s=5*part2_acc**1.1)
+cbar = fig2.colorbar(scat2, ticks=[np.min(part2_acc), np.max(part2_acc)])
+cbar.ax.set_yticklabels([round(np.min(part2_acc), 2), round(np.max(part2_acc), 2)])# vertically oriented colorbar
+cbar.ax.get_yaxis().labelpad = 10
+cbar.set_label('Accretion Rate (mm/yr)', rotation=270)
+
+ax2.set_ylabel('Avg. Flood Depth (ft)')
+ax2.set_xlabel('Soil Porewater Salinity (ppt)')
+# plt.legend()
+plt.show()
+fig2.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\salinity_floodDepth.eps",
+             dpi=300, format="eps")
 
 
 
