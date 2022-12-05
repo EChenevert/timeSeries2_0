@@ -189,8 +189,8 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
             # Save average std on each prediction
             #         pred_certain.append(np.mean(ystd))
 
-            pred_list += list(ypred)
-            pred_certain += list(ystd)
+            pred_list += list(10 ** ypred)
+            pred_certain += list(10 ** ystd)
 
             # Metrics for scaled y: ESSENTIAL
             exp10_y_test = 10 ** y_test

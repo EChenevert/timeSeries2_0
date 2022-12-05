@@ -206,10 +206,11 @@ rdf = rdf.rename(columns={
     '90th Percentile Flood Depth when Flooded (ft)': '90th Percentile Flood Depth (ft)',
     '10th Percentile Flood Depth when Flooded (ft)': '10th Percentile Flood Depth (ft)',
     'Avg. Flood Depth when Flooded (ft)': 'Avg. Flood Depth (ft)',
-    'Std. Deviation Flood Depth when Flooded': 'Std. Deviation Flood Depth (ft)'
+    'Std. Deviation Flood Depth when Flooded ': 'Std. Deviation Flood Depth (ft)'
 })
 
-gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude']]], axis=1, join='inner')
+gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude', 'Organic Matter (%)', 'Bulk Density (g/cm3)']]],
+                axis=1, join='inner')
 # Export gdf to file specifically for AGU data and results
 gdf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv")
 
@@ -240,7 +241,8 @@ for key in marshdic:
     mdf = marshdic[key]  # .drop('Community', axis=1)
     # It is preshuffled so i do not think ordering will be a problem
     t = np.log10(mdf[outcome].reset_index().drop('index', axis=1))
-    phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude'], axis=1).reset_index().drop('index', axis=1)
+    phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude',  'Organic Matter (%)', 'Bulk Density (g/cm3)'],
+                   axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
     scalar_Xmarsh = StandardScaler()
     predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
@@ -334,7 +336,7 @@ for key in hold_marsh_weights:
 # Plot the distribution of weight parameters for the marsh runs
 for key in hold_unscaled_weights:
     sns.set_theme(style='white', font_scale=1.4)
-    fig, ax = plt.subplots(figsize=(7, 7))
+    fig, ax = plt.subplots(figsize=(6, 8))
     # matplotlib.rcParams['pdf.fonttype'] = 42
     ax.set_title(str(key) + " Sites")
     ax.axhline(0, ls='--')
