@@ -18,21 +18,53 @@ df = pd.read_csv(r"D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv", e
 # # Part 1. Show Tidal Amp is important.
 # # Show that bulk density and accretion increases with tidal amp; some sort of oceanic influence on accretion and
 # # mineral sediment
+plt.rcParams.update({'font.size': 16})
+
 tides = np.asarray(df['Tide Amp (ft)'])
 all_acc = np.asarray(df['Accretion Rate (mm/yr)'])
 bulk = np.asarray(df['Bulk Density (g/cm3)'])
-# bulk_size = bulk ** 2
+
 fig1, ax1 = plt.subplots(figsize=(8, 6))
 scat = ax1.scatter(tides, all_acc, c=bulk, cmap="rocket_r", s=50*10**bulk)
-cb = fig1.colorbar(scat, ax=ax1)
-cb.ax.get_yaxis().labelpad = 20
-cb.set_label('Density of Predictions', rotation=270)
+
+cbar = fig1.colorbar(scat, ticks=[np.min(bulk), np.max(bulk)])
+cbar.ax.set_yticklabels([round(np.min(bulk), 2), round(np.max(bulk), 2)])# vertically oriented colorbar
+cbar.ax.get_yaxis().labelpad = 10
+cbar.set_label('Bulk Density (g/cm3)', rotation=270)
 
 m, b = np.polyfit(tides, all_acc, deg=1)
 xseq = np.linspace(0, np.max(tides), num=100)
 ax1.plot(xseq, xseq*m + b, "k--", lw=2.5, label="{m}Tide Amp + {b}".format(b=round(b, 2), m=round(m, 2)))
+ax1.set_ylabel('Accretion Rate (mm/yr)')
+ax1.set_xlabel('Tide Amp (ft)')
 plt.legend()
 plt.show()
+
+# Show that TSS comliments the interpretation that position in tidal frame is related to Suspended Sediment delivery
+tss = np.asarray(df['TSS (mg/l)'])
+
+fig2, ax2 = plt.subplots(figsize=(8, 6))
+scat2 = ax2.scatter(tss, all_acc, c=bulk, cmap="rocket_r", s=50*10**bulk)
+cbar = fig2.colorbar(scat, ticks=[np.min(bulk), np.max(bulk)])
+cbar.ax.set_yticklabels([round(np.min(bulk), 2), round(np.max(bulk), 2)])# vertically oriented colorbar
+cbar.ax.get_yaxis().labelpad = 10
+cbar.set_label('Bulk Density (g/cm3)', rotation=270)
+
+m, b = np.polyfit(tss, all_acc, deg=1)
+xseq = np.linspace(0, np.max(tss), num=100)
+ax2.plot(xseq, xseq*m + b, "k--", lw=2.5, label="{m}TSS + {b}".format(b=round(b, 2), m=round(m, 2)))
+ax2.set_ylabel('Accretion Rate (mm/yr)')
+ax2.set_xlabel('TSS (mg/l)')
+plt.legend()
+plt.show()
+
+
+
+
+# Part 2. NDVI Looking specifically at difference between Freshwater + Intermediate and Saline Marshes
+# Say that there is a clear difference
+
+
 
 
 
