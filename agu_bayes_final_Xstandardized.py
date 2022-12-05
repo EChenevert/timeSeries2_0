@@ -306,7 +306,7 @@ colormap = {
 '10th Percentile of Waterlevel to Marsh (ft)': '#73ABAE',
 '10th Percentile Flood Depth (ft)': '#73ACAE',
 # 'Std. Deviation of Flooding (ft)': '#DE5100',
-'Std. Deviation Flood Depth when Flooded ': '#DE5100',
+'Std. Deviation Flood Depth (ft)': '#DE5100',
 'Avg. Time Flooded (%)': '#970CBD',
 'Flood Freq (Floods/yr)': '#EB0000',
 'Log Distance to Water (km)': '#442929',
@@ -336,7 +336,7 @@ for key in hold_marsh_weights:
 # Plot the distribution of weight parameters for the marsh runs
 for key in hold_unscaled_weights:
     sns.set_theme(style='white', font_scale=1.4)
-    fig, ax = plt.subplots(figsize=(6, 8))
+    fig, ax = plt.subplots(figsize=(7, 8))
     # matplotlib.rcParams['pdf.fonttype'] = 42
     ax.set_title(str(key) + " Sites")
     ax.axhline(0, ls='--')
