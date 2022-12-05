@@ -235,8 +235,8 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
                    gridsize=30, edgecolors='grey',
                    cmap=color_scheme['cmap'], mincnt=1)
     ax.set_facecolor('white')
-    ax.set_xlabel("Estimated Accretion Rate (mm/yr)")
-    ax.set_ylabel("Measured Accretion Rate (mm/yr)")
+    ax.set_xlabel("Measured Accretion Rate (mm/yr)")
+    ax.set_ylabel("Estimated Accretion Rate (mm/yr)")
     ax.set_title(marsh_key + " Sites")
     cb = fig.colorbar(hb, ax=ax)
     cb.ax.get_yaxis().labelpad = 20
