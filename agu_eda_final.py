@@ -39,6 +39,8 @@ ax1.set_ylabel('Accretion Rate (mm/yr)')
 ax1.set_xlabel('Tide Amp (ft)')
 plt.legend()
 plt.show()
+fig1.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\tides_accretion.eps",
+            dpi=300, format="eps")
 
 # Show that TSS comliments the interpretation that position in tidal frame is related to Suspended Sediment delivery
 tss = np.asarray(df['TSS (mg/l)'])
@@ -57,12 +59,32 @@ ax2.set_ylabel('Accretion Rate (mm/yr)')
 ax2.set_xlabel('TSS (mg/l)')
 plt.legend()
 plt.show()
-
+fig2.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\tss_accretion.eps",
+            dpi=300, format="eps")
 
 
 
 # Part 2. NDVI Looking specifically at difference between Freshwater + Intermediate and Saline Marshes
 # Say that there is a clear difference
+for_part2 = df[(df['Community'] == 'Saline') | (df['Community'] == 'Freshwater') | (df['Community'] == 'Intermediate')]
+
+sns.set_theme(style='white', font_scale=1.4)
+f = plt.figure(figsize=(8, 6))
+ax = f.add_subplot(1, 1, 1)
+sns.histplot(ax=ax, stat="count", multiple="stack", bins=30,
+             x=for_part2['NDVI'], kde=False,
+             hue=for_part2["Community"], palette="deep",
+             element="bars", legend=True)
+ax.set_title("Log Distribution of Accretion Rates")
+ax.set_xlabel("NDVI")
+ax.set_ylabel("Count")
+f.subplots_adjust(bottom=0.2)
+plt.show()
+f.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\ndvi_histogram.eps",
+          dpi=300, format="eps")
+
+
+
 
 
 
