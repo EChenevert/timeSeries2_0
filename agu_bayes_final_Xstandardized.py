@@ -205,7 +205,8 @@ rdf = rdf.rename(columns={
     # My flood depth vars
     '90th Percentile Flood Depth when Flooded (ft)': '90th Percentile Flood Depth (ft)',
     '10th Percentile Flood Depth when Flooded (ft)': '10th Percentile Flood Depth (ft)',
-    'Avg. Flood Depth when Flooded (ft)': 'Avg. Flood Depth (ft)'
+    'Avg. Flood Depth when Flooded (ft)': 'Avg. Flood Depth (ft)',
+    'Std. Deviation Flood Depth when Flooded': 'Std. Deviation Flood Depth (ft)'
 })
 
 gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude']]], axis=1, join='inner')
@@ -220,9 +221,11 @@ freshdf = gdf[gdf['Community'] == 'Freshwater']
 interdf = gdf[gdf['Community'] == 'Intermediate']
 combined = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Brackish')]
 freshinter = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Freshwater')]
+bracksal = gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Brackish')]
 # Exclude swamp
 marshdic = {'All': gdf, 'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
-            'Intermediate and Brackish': combined, 'Freshwater and Intermediate': freshinter}
+            'Intermediate and Brackish': combined, 'Freshwater and Intermediate': freshinter,
+            'Brackish and Saline': bracksal}
 
 
 hold_marsh_weights = {}
@@ -310,7 +313,7 @@ colormap = {
 
 for key in hold_marsh_weights:
     d = pd.DataFrame(hold_marsh_weights[key].mean().reset_index()).rename(columns={0: 'Means'})
-    sns.set_theme(style='white', font_scale=1)
+    sns.set_theme(style='white', font_scale=1.4)
     fig, ax = plt.subplots(figsize=(7, 7))
     # my_cmap = plt.get_cmap("cool")
     # ax.bar(list(d['index']), list(d['Means']), color='Blue')
@@ -324,13 +327,13 @@ for key in hold_marsh_weights:
     fig.subplots_adjust(bottom=0.3)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + str(key) +
                 "_scaledX_nolog_boxplot_human.eps", format='eps',
-                dpi=500,
+                dpi=300,
                 bbox_inches='tight')
     plt.show()
 
 # Plot the distribution of weight parameters for the marsh runs
 for key in hold_unscaled_weights:
-    sns.set_theme(style='white', font_scale=1)
+    sns.set_theme(style='white', font_scale=1.4)
     fig, ax = plt.subplots(figsize=(7, 7))
     # matplotlib.rcParams['pdf.fonttype'] = 42
     ax.set_title(str(key) + " Sites")
@@ -345,7 +348,7 @@ for key in hold_unscaled_weights:
     fig.subplots_adjust(bottom=0.3)
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + str(
         key) + "_unscaledWeights_nolog_boxplot_human.eps", format='eps',
-                dpi=500,
+                dpi=300,
                 bbox_inches='tight')
     plt.show()
 
@@ -360,7 +363,7 @@ sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\regularization_scaledX_nolog_boxplot_human.eps",
             format='eps',
-            dpi=500,
+            dpi=300,
             bbox_inches='tight')
 plt.show()
 
@@ -376,7 +379,7 @@ sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\certainty_scaledX_nolog_boxplot_human.eps",
             format='eps',
-            dpi=500,
+            dpi=300,
             bbox_inches='tight')
 plt.show()
 
@@ -391,7 +394,7 @@ ax.set_title('Distribution of Intercepts [Unscaled]:')
 ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\intercepts_nolog_boxplot_human.eps", dpi=500,
+fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\intercepts_nolog_boxplot_human.eps", dpi=300,
             format='eps',
             bbox_inches='tight')
 plt.show()
@@ -407,7 +410,7 @@ ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
 fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\pred_certainty_scaledX_nolog_boxplot_human.eps",
-            dpi=500, format='eps',
+            dpi=300, format='eps',
             bbox_inches='tight')
 plt.show()
 

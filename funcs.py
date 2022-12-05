@@ -228,8 +228,8 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
     exp10_y_ls = [10 ** y_i for y_i in y_ls]
     exp10_predicted = [10 ** y_i for y_i in predicted]
 
-    plt.rcParams.update({'font.size': 15})
-    fig, ax = plt.subplots(figsize=(9, 9))
+    plt.rcParams.update({'font.size': 16})
+    fig, ax = plt.subplots(figsize=(9, 8))
     hb = ax.hexbin(x=exp10_y_ls,
                    y=exp10_predicted,
                    gridsize=30, edgecolors='grey',
@@ -237,7 +237,7 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
     ax.set_facecolor('white')
     ax.set_xlabel("Estimated Accretion Rate (mm/yr)")
     ax.set_ylabel("Measured Accretion Rate (mm/yr)")
-    ax.set_title(marsh_key + " Sites: 100x Repeated 5-fold CV")
+    ax.set_title(marsh_key + " Sites")
     cb = fig.colorbar(hb, ax=ax)
     cb.ax.get_yaxis().labelpad = 20
     cb.set_label('Density of Predictions', rotation=270)
@@ -247,15 +247,15 @@ def log10_cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix
     ax.plot([exp10_y.min(), exp10_y.max()], [exp10_y.min(), exp10_y.max()],
             color_scheme['line'], lw=3)
 
-    ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 450), xycoords='axes points',
+    ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 410), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=15, ha='left', va='top')
-    ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 410), xycoords='axes points',
+    ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 380), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=15, ha='left', va='top')
     fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + marsh_key +
                 "_scaledX_nolog_cv_human.eps", format='eps',
-                dpi=500,
+                dpi=300,
                 bbox_inches='tight')
     plt.show()
 
