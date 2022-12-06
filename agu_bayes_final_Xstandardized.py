@@ -282,7 +282,7 @@ for key in marshdic:
 
     baymod = linear_model.BayesianRidge(fit_intercept=True)
 
-    results_dict = funcs.log10_cv_results_and_plot(baymod, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
+    results_dict = funcs.log10_cv_results_and_plot2(baymod, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
 
     hold_marsh_weights[key] = results_dict["Scaled Weights"]
     hold_unscaled_weights[key] = results_dict["Unscaled Weights"]

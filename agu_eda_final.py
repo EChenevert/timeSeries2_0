@@ -122,14 +122,31 @@ fig2.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\ndvi_accr
 # Say that this is likely due to the salinity flooding brings
 salinity = np.asarray(for_part2['Soil Porewater Salinity (ppt)'])
 
-fig2, ax2 = plt.subplots(figsize=(8, 6))
-scat2 = ax2.scatter(salinity, flooding, c=part2_acc, cmap="rocket_r", s=5*part2_acc**1.1)
-cbar = fig2.colorbar(scat2, ticks=[np.min(part2_acc), np.max(part2_acc)])
-cbar.ax.set_yticklabels([round(np.min(part2_acc), 2), round(np.max(part2_acc), 2)])# vertically oriented colorbar
-cbar.ax.get_yaxis().labelpad = 10
-cbar.set_label('Accretion Rate (mm/yr)', rotation=270)
+# fig2, ax2 = plt.subplots(figsize=(8, 6))
+# scat2 = ax2.scatter(salinity, flooding, c=part2_acc, cmap="rocket_r", s=5*part2_acc**1.1)
+# cbar = fig2.colorbar(scat2, ticks=[np.min(part2_acc), np.max(part2_acc)])
+# cbar.ax.set_yticklabels([round(np.min(part2_acc), 2), round(np.max(part2_acc), 2)])# vertically oriented colorbar
+# cbar.ax.get_yaxis().labelpad = 10
+# cbar.set_label('Accretion Rate (mm/yr)', rotation=270)
+#
+# ax2.set_ylabel('Avg. Flood Depth (ft)')
+# ax2.set_xlabel('Soil Porewater Salinity (ppt)')
+# # plt.legend()
+# plt.show()
+# fig2.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\EDA_agu_final\\salinity_floodDepth.eps",
+#              dpi=300, format="eps")
 
-ax2.set_ylabel('Avg. Flood Depth (ft)')
+
+
+#### Add a plot so that they are on the same scale
+fig2, ax2 = plt.subplots(figsize=(8, 6))
+scat2 = ax2.scatter(salinity, part2_acc, c=flooding, cmap="rocket_r", s=50*5**flooding)
+cbar = fig2.colorbar(scat2, ticks=[np.min(flooding), np.max(flooding)])
+cbar.ax.set_yticklabels([round(np.min(flooding), 2), round(np.max(flooding), 2)])# vertically oriented colorbar
+cbar.ax.get_yaxis().labelpad = 20
+cbar.set_label('Avg. Flood Depth (ft)', rotation=270)
+
+ax2.set_ylabel('Accretion Rate (mm/yr)')
 ax2.set_xlabel('Soil Porewater Salinity (ppt)')
 # plt.legend()
 plt.show()
