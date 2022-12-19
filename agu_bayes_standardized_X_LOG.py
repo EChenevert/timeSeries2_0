@@ -665,9 +665,10 @@ for key in hold_marsh_weights:
     d = pd.DataFrame(hold_marsh_weights[key].mean().reset_index()).rename(columns={0: 'Means'})
     # sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
     fig, ax = plt.subplots(figsize=(6, 4))
+    ax.set_ylabel("Relative Feature Importance")
     # my_cmap = plt.get_cmap("cool")
     # ax.bar(list(d['index']), list(d['Means']), color='Blue')
-    ax.set_title('Distribution of Learned Weight Vectors [Scaled]: ' + str(key) + " Sites")
+    # ax.set_title('Distribution of Learned Weight Vectors [Scaled]: ' + str(key) + " Sites")
     # sns.barplot(data=hold_marsh_weights[key], palette="Blues")
     sns.barplot(list(d['index']), list(d['Means']), palette="Blues")
     funcs.wrap_labels(ax, 10)
@@ -681,8 +682,9 @@ for key in hold_marsh_weights:
 for key in hold_unscaled_weights:
     sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
     fig, ax = plt.subplots(figsize=(6, 4))
+    ax.set_ylabel("Weight Coefficients (Modelled on E[log(y)])")
     # matplotlib.rcParams['pdf.fonttype'] = 42
-    ax.set_title('Distribution of Learned Weight Vectors [Unscaled]: ' + str(key) + " Sites")
+    # ax.set_title('Distribution of Learned Weight Vectors [Unscaled]: ' + str(key) + " Sites")
     if key != 'Saline':
         ax.axhline(0, ls='--')
     boxplot = sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette="Greys")

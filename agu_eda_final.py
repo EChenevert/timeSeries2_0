@@ -75,7 +75,7 @@ sns.histplot(ax=ax, stat="count", multiple="stack", bins=30,
              x=for_part2['NDVI'], kde=False,
              hue=for_part2["Community"], palette=["Red", "Orange", "Purple"],
              element="bars", legend=True)
-ax.set_title("Log Distribution of Accretion Rates")
+ax.set_title("Distribution of NDVI")
 ax.set_xlabel("NDVI")
 ax.set_ylabel("Count")
 f.subplots_adjust(bottom=0.2)
@@ -91,7 +91,7 @@ sns.histplot(ax=ax, stat="count", multiple="stack", bins=30,
              x=for_part2['Soil Porewater Salinity (ppt)'], kde=False,
              hue=for_part2["Community"], palette=["Red", "Orange", "Purple"],
              element="bars", legend=True)
-ax.set_title("Log Distribution of Accretion Rates")
+ax.set_title("Distribution of Soil Porewater Salinity (ppt)")
 ax.set_xlabel('Soil Porewater Salinity (ppt)')
 ax.set_ylabel("Count")
 f.subplots_adjust(bottom=0.2)
@@ -146,7 +146,7 @@ cbar.ax.set_yticklabels([round(np.min(flooding), 2), round(np.max(flooding), 2)]
 cbar.ax.get_yaxis().labelpad = 20
 cbar.set_label('Avg. Flood Depth (ft)', rotation=270)
 
-ax2.set_ylabel('Accretion Rate (mm/yr)')
+ax2.set_ylabel('Distribution of Soil Porewater (ppt)')
 ax2.set_xlabel('Soil Porewater Salinity (ppt)')
 # plt.legend()
 plt.show()

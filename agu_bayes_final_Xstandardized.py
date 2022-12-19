@@ -317,9 +317,10 @@ for key in hold_marsh_weights:
     d = pd.DataFrame(hold_marsh_weights[key].mean().reset_index()).rename(columns={0: 'Means'})
     sns.set_theme(style='white', font_scale=1.4)
     fig, ax = plt.subplots(figsize=(7, 7))
+    ax.set_ylabel("Relative Feature Importance")
     # my_cmap = plt.get_cmap("cool")
     # ax.bar(list(d['index']), list(d['Means']), color='Blue')
-    ax.set_title(str(key) + " Sites")
+    # ax.set_title(str(key) + " Sites")
     # sns.barplot(data=hold_marsh_weights[key], palette="Blues")
     palette_ls = []
     for weight in d['index']:
@@ -337,8 +338,9 @@ for key in hold_marsh_weights:
 for key in hold_unscaled_weights:
     sns.set_theme(style='white', font_scale=1.4)
     fig, ax = plt.subplots(figsize=(7, 8))
+    ax.set_ylabel("Scaled Weight Coefficients (Modelled on log(y))")
     # matplotlib.rcParams['pdf.fonttype'] = 42
-    ax.set_title(str(key) + " Sites")
+    # ax.set_title(str(key) + " Sites")
     ax.axhline(0, ls='--')
     # if key != 'Saline':
     #     ax.axhline(0, ls='--')
