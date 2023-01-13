@@ -1,6 +1,6 @@
 from mlxtend.feature_selection import ExhaustiveFeatureSelector
-from sklearn import linear_model
-
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import DotProduct, WhiteKernel
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score, mean_absolute_error
 from random import seed
@@ -192,17 +192,17 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 
 # Rename some variables for better text wrapping
 rdf = rdf.rename(columns={
-    'Tide_Amp (ft)': 'Tide Amp (ft)',
+    'Tide_Amp (ft)': 'Tidal Amplitude (ft)',
     'avg_percentflooded (%)': 'Avg. Time Flooded (%)',
-    'windspeed': 'Windspeed',
+    'windspeed': 'Windspeed (m/s)',
     # 'log_distance_to_ocean_km': 'log distance to ocean km',
     # 'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
     'log_distance_to_water_km': 'Log Distance to Water (km)',
     'log_distance_to_river_km': 'Log Distance to River (km)',
-    '10%thLower_flooding (ft)': '10th Percentile of Waterlevel to Marsh (ft)',
-    '90%thUpper_flooding (ft)': '90th Percentile of Waterlevel to Marsh (ft)',
-    'avg_flooding (ft)': 'Avg. Waterlevel to Marsh (ft)',
-    'std_deviation_avg_flooding (ft)': 'Std. Deviation of Flooding (ft)',
+    # '10%thLower_flooding (ft)': '10th Percentile of Waterlevel to Marsh (ft)',
+    # '90%thUpper_flooding (ft)': '90th Percentile of Waterlevel to Marsh (ft)',
+    # 'avg_flooding (ft)': 'Avg. Waterlevel to Marsh (ft)',
+    # 'std_deviation_avg_flooding (ft)': 'Std. Deviation of Flooding (ft)',
     # My flood depth vars
     '90th Percentile Flood Depth when Flooded (ft)': '90th Percentile Flood Depth (ft)',
     '10th Percentile Flood Depth when Flooded (ft)': '10th Percentile Flood Depth (ft)',
@@ -210,13 +210,21 @@ rdf = rdf.rename(columns={
     'Std. Deviation Flood Depth when Flooded ': 'Std. Deviation Flood Depth (ft)'
 })
 
+# Now lets change some of these variables into SI units
+rdf['Tidal Amplitude (cm)'] = rdf['Tidal Amplitude (ft)'] * 30.48  # feet to meter conversion
+rdf['90th Percentile Flood Depth (cm)'] = rdf['90th Percentile Flood Depth (ft)'] * 30.48  # feet to meter conversion
+rdf['10th Percentile Flood Depth (cm)'] = rdf['10th Percentile Flood Depth (ft)'] * 30.48  # feet to meter conversion
+rdf['Std. Deviation Flood Depth (cm)'] = rdf['Std. Deviation Flood Depth (ft)'] * 30.48
+rdf['Avg. Flood Depth (cm)'] = rdf['Avg. Flood Depth (ft)'] * 30.48
+rdf = rdf.drop(['Tidal Amplitude (ft)', '90th Percentile Flood Depth (ft)', '10th Percentile Flood Depth (ft)',
+                'Std. Deviation Flood Depth (ft)', 'Avg. Flood Depth (ft)'], axis=1)
+
 gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude', 'Organic Matter (%)', 'Bulk Density (g/cm3)']]],
                 axis=1, join='inner')
 # Export gdf to file specifically for AGU data and results
 gdf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv")
 
 # split into marsh datasets
-
 brackdf = gdf[gdf['Community'] == 'Brackish']
 saldf = gdf[gdf['Community'] == 'Saline']
 freshdf = gdf[gdf['Community'] == 'Freshwater']
@@ -237,53 +245,36 @@ hold_marsh_regularizors = {}
 hold_marsh_weight_certainty = {}
 hold_prediction_certainty = {}
 
+# Set the kernel for GPR
+kernel = (DotProduct() ** 2) + WhiteKernel
+
 for key in marshdic:
     print(key)
-    mdf = marshdic[key]  # .drop('Community', axis=1)
-    # It is preshuffled so i do not think ordering will be a problem
+    mdf = marshdic[key]
+
     t = np.log10(mdf[outcome].reset_index().drop('index', axis=1))
-    phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude',  'Organic Matter (%)', 'Bulk Density (g/cm3)'],
+    phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude', 'Organic Matter (%)', 'Bulk Density (g/cm3)'],
                    axis=1).reset_index().drop('index', axis=1)
-    # Scale: because I want feature importances
+
+    # Scale: because I want feature importance
     scalar_Xmarsh = StandardScaler()
     predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
-    # NOTE: I do feature selection using whole dataset because I want to know the imprtant features rather than making a generalizable model
-    br = linear_model.BayesianRidge(fit_intercept=True)
 
-    feature_selector = ExhaustiveFeatureSelector(br,
-                                                     min_features=1,
-                                                     max_features=len(phi.columns.values),
-                                                     # I should only use 5 features (15 takes waaaaay too long)
-                                                     scoring='neg_mean_absolute_error',
-                                                     # print_progress=True,
-                                                     cv=3)  # 3 fold cross-validation
+    gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=0, alpha=0.5)
+
+    feature_selector = ExhaustiveFeatureSelector(gp, min_features=1, max_features=len(predictors_scaled.columns.values),
+                                                 scoring='neg_mean_absolute_error', cv=3)  # 3-fold for comp. efficiency
 
     efsmlr = feature_selector.fit(predictors_scaled, t.values.ravel())
-
     print('Best CV r2 score: %.2f' % efsmlr.best_score_)
     print('Best subset (indices):', efsmlr.best_idx_)
     print('Best subset (corresponding names):', efsmlr.best_feature_names_)
 
-    # if key == 'Freshwater':
-    #     bestfeaturesM = ['TSS (mg/l)', 'NDVI', 'Tide Amp (ft)']
-    # else:
-    #     bestfeaturesM = list(efsmlr.best_feature_names_)
-
     bestfeaturesM = list(efsmlr.best_feature_names_)
-
-    # bestfeaturesM = funcs.backward_elimination(predictors_scaled, t.values.ravel(), num_feats=100,
-    #                                            significance_level=0.01)
-
-    # Lets conduct the Bayesian Ridge Regression on this dataset: do this because we can regularize w/o cross val
-    #### NOTE: I should do separate tests to determine which split of the data is optimal ######
-    # first split data set into test train
-    from sklearn.model_selection import train_test_split, cross_val_score, RepeatedKFold
 
     X, y = predictors_scaled[bestfeaturesM], t
 
-    baymod = linear_model.BayesianRidge(fit_intercept=True)
-
-    results_dict = funcs.log10_cv_results_and_plot2(baymod, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
+    results_dict = funcs.log10_cv_results_and_plot2(gp, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
 
     hold_marsh_weights[key] = results_dict["Scaled Weights"]
     hold_unscaled_weights[key] = results_dict["Unscaled Weights"]
@@ -292,132 +283,5 @@ for key in marshdic:
     hold_prediction_certainty[key] = results_dict["Standard Deviations of Predictions"]
     hold_intercept[key] = results_dict["Unscaled Intercepts"]
 
-# Make a colormap so all each weight will have a specific color
-colormap = {
-'Soil Porewater Salinity (ppt)': '#DD8A8A',
-'Average Height Dominant (cm)': '#137111',
-'NDVI': '#0AFF06',
-'TSS (mg/l)': '#8E6C02',
-'Windspeed': '#70ECE3',
-'Tide Amp (ft)': '#434F93',
-'Avg. Flood Depth (ft)': '#087AFA',
-'Avg. Waterlevel to Marsh (ft)':  '#087AFD',
-'90th Percentile of Waterlevel to Marsh (ft)': '#D001A1',
-'90th Percentile Flood Depth (ft)': '#D000E1',
-'10th Percentile of Waterlevel to Marsh (ft)': '#73ABAE',
-'10th Percentile Flood Depth (ft)': '#73ACAE',
-# 'Std. Deviation of Flooding (ft)': '#DE5100',
-'Std. Deviation Flood Depth (ft)': '#DE5100',
-'Avg. Time Flooded (%)': '#970CBD',
-'Flood Freq (Floods/yr)': '#EB0000',
-'Log Distance to Water (km)': '#442929',
-'Log Distance to River (km)': '#045F38',
-}
-
-for key in hold_marsh_weights:
-    d = pd.DataFrame(hold_marsh_weights[key].mean().reset_index()).rename(columns={0: 'Means'})
-    sns.set_theme(style='white', font_scale=1.4)
-    fig, ax = plt.subplots(figsize=(7, 7))
-    ax.set_ylabel("Relative Feature Importance")
-    # my_cmap = plt.get_cmap("cool")
-    # ax.bar(list(d['index']), list(d['Means']), color='Blue')
-    # ax.set_title(str(key) + " Sites")
-    # sns.barplot(data=hold_marsh_weights[key], palette="Blues")
-    palette_ls = []
-    for weight in d['index']:
-        palette_ls.append(colormap[weight])
-    sns.barplot(list(d['index']), list(d['Means']), palette=palette_ls)
-    funcs.wrap_labels(ax, 10)
-    fig.subplots_adjust(bottom=0.3)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + str(key) +
-                "_scaledX_nolog_boxplot_human.eps", format='eps',
-                dpi=300,
-                bbox_inches='tight')
-    plt.show()
-
-# Plot the distribution of weight parameters for the marsh runs
-for key in hold_unscaled_weights:
-    sns.set_theme(style='white', font_scale=1.4)
-    fig, ax = plt.subplots(figsize=(7, 8))
-    ax.set_ylabel("Scaled Weight Coefficients (Modelled on log(y))")
-    # matplotlib.rcParams['pdf.fonttype'] = 42
-    # ax.set_title(str(key) + " Sites")
-    ax.axhline(0, ls='--')
-    # if key != 'Saline':
-    #     ax.axhline(0, ls='--')
-    palette_ls = []
-    for weight in hold_unscaled_weights[key].keys():
-        palette_ls.append(colormap[weight])
-    boxplot = sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette=palette_ls)
-    funcs.wrap_labels(ax, 10)
-    fig.subplots_adjust(bottom=0.3)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + str(
-        key) + "_unscaledWeights_nolog_boxplot_human.eps", format='eps',
-                dpi=300,
-                bbox_inches='tight')
-    plt.show()
 
 
-# Plot the distribution of the eff_reg parameter for each run
-eff_reg_df = pd.DataFrame(hold_marsh_regularizors)
-sns.set_theme(style='white', font_scale=1)
-fig, ax = plt.subplots(figsize=(6, 4))
-# matplotlib.rcParams['pdf.fonttype'] = 42
-ax.set_title('Distribution of Learned Effective Regularization Parameters')
-sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
-funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\regularization_scaledX_nolog_boxplot_human.eps",
-            format='eps',
-            dpi=300,
-            bbox_inches='tight')
-plt.show()
-
-
-# Plot the distribution of the certainty of parameters for each run
-certainty_df = pd.DataFrame(hold_marsh_weight_certainty)
-sns.set_theme(style='white', rc={'figure.dpi': 147},
-              font_scale=0.7)
-fig, ax = plt.subplots(figsize=(6, 4))
-# matplotlib.rcParams['pdf.fonttype'] = 42
-ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
-sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
-funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\certainty_scaledX_nolog_boxplot_human.eps",
-            format='eps',
-            dpi=300,
-            bbox_inches='tight')
-plt.show()
-
-
-
-# Plot the distribution calculated intercepts
-intercept_df = pd.DataFrame(hold_intercept)
-sns.set_theme(style='white', rc={'figure.dpi': 147}, font_scale=0.7)
-fig, ax = plt.subplots(figsize=(6, 4))
-# matplotlib.rcParams['pdf.fonttype'] = 42
-ax.set_title('Distribution of Intercepts [Unscaled]:')
-ax.axhline(0, ls='--')
-sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
-funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\intercepts_nolog_boxplot_human.eps", dpi=300,
-            format='eps',
-            bbox_inches='tight')
-plt.show()
-
-
-# Plot the distribution of the certainty of predictions for each run
-pred_certainty_df = pd.DataFrame(hold_prediction_certainty)
-sns.set_theme(style='white', rc={'figure.dpi': 147},
-              font_scale=0.7)
-fig, ax = plt.subplots(figsize=(6, 4))
-# matplotlib.rcParams['pdf.fonttype'] = 42
-ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
-sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
-funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\pred_certainty_scaledX_nolog_boxplot_human.eps",
-            dpi=300, format='eps',
-            bbox_inches='tight')
-plt.show()
-
-# Following https://christophm.github.io/interpretable-ml-book/limo.html for individual feature importances
-# Want to show points for the 10th, 25th, 50th, 75th, 90th poins of outcome and their feature effects
