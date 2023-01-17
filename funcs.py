@@ -53,6 +53,7 @@ def wrap_labels(ax, width, break_long_words=False):
 
 # https://www.analyticsvidhya.com/blog/2020/10/a-comprehensive-guide-to-feature-selection-using-wrapper-methods-in-python/#:~:text=1.-,Forward%20selection,with%20all%20other%20remaining%20features.
 def backward_elimination(data, target, num_feats=5, significance_level=0.05):
+    target = list(target)
     features = data.columns.tolist()
     while(len(features)>0):
         features_with_constant = sm.add_constant(data[features])

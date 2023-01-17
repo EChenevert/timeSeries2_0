@@ -224,64 +224,119 @@ gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude', 'Organic Matter
 # Export gdf to file specifically for AGU data and results
 gdf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv")
 
-# split into marsh datasets
-brackdf = gdf[gdf['Community'] == 'Brackish']
-saldf = gdf[gdf['Community'] == 'Saline']
-freshdf = gdf[gdf['Community'] == 'Freshwater']
-interdf = gdf[gdf['Community'] == 'Intermediate']
-combined = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Brackish')]
-freshinter = gdf[(gdf['Community'] == 'Intermediate') | (gdf['Community'] == 'Freshwater')]
-bracksal = gdf[(gdf['Community'] == 'Saline') | (gdf['Community'] == 'Brackish')]
-# Exclude swamp
-marshdic = {'All': gdf, 'Brackish': brackdf, 'Saline': saldf, 'Freshwater': freshdf, 'Intermediate': interdf,
-            'Intermediate and Brackish': combined, 'Freshwater and Intermediate': freshinter,
-            'Brackish and Saline': bracksal}
 
-
-hold_marsh_weights = {}
-hold_unscaled_weights = {}
-hold_intercept = {}
-hold_marsh_regularizors = {}
-hold_marsh_weight_certainty = {}
-hold_prediction_certainty = {}
-
+### We will only compute the GPR for the whole dataset --> found that it was the most efficent
+predictors = gdf.drop([outcome, 'Community', 'Longitude', 'Latitude', 'Organic Matter (%)', 'Bulk Density (g/cm3)'], axis=1)
+target = gdf[outcome]
+# Scale
+scalar = StandardScaler()
+predictors_scaled = pd.DataFrame(scalar.fit_transform(predictors), columns=predictors.columns.values)
 # Set the kernel for GPR
-kernel = (DotProduct() ** 2) + WhiteKernel
 
-for key in marshdic:
-    print(key)
-    mdf = marshdic[key]
+# # Could make the excuse that it is too computationally expensive to do this calculation and therefore backward \
+# feature selection is preferable... a lil weird tho... tends to linear relationships
 
-    t = np.log10(mdf[outcome].reset_index().drop('index', axis=1))
-    phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude', 'Organic Matter (%)', 'Bulk Density (g/cm3)'],
-                   axis=1).reset_index().drop('index', axis=1)
+# gpr = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=0, alpha=0.5)
+#
+# feature_selector = ExhaustiveFeatureSelector(gpr, min_features=1, max_features=len(predictors_scaled.columns.values),
+#                                             scoring='neg_mean_absolute_error', cv=3)
+#
+# efs = feature_selector.fit(predictors_scaled, target.values.ravel())
+# print('Best Subset (feature names): ', efs.best_feature_names_)
+#
+# X = predictors[list(efs.best_feature_names_)]
 
-    # Scale: because I want feature importance
-    scalar_Xmarsh = StandardScaler()
-    predictors_scaled = pd.DataFrame(scalar_Xmarsh.fit_transform(phi), columns=phi.columns.values)
+# Backward feature elimination
+bestfeatures = funcs.backward_elimination(data=predictors_scaled, target=target, num_feats=20, significance_level=0.05)
+X = predictors_scaled[bestfeatures]
 
-    gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=0, alpha=0.5)
+# ### Now for the actual testing.
+# rcv = RepeatedKFold(n_splits=5, n_repeats=100, random_state=123)
+# scores = cross_validate(gpr, X, target, cv=rcv)
 
-    feature_selector = ExhaustiveFeatureSelector(gp, min_features=1, max_features=len(predictors_scaled.columns.values),
-                                                 scoring='neg_mean_absolute_error', cv=3)  # 3-fold for comp. efficiency
+# Visualize manual cross validation
 
-    efsmlr = feature_selector.fit(predictors_scaled, t.values.ravel())
-    print('Best CV r2 score: %.2f' % efsmlr.best_score_)
-    print('Best subset (indices):', efsmlr.best_idx_)
-    print('Best subset (corresponding names):', efsmlr.best_feature_names_)
+# Performance Metric Containers: I allow use the median because I want to be more robust to outliers
+r2_total_medians = []  # holds the k-fold median r^2 value. Will be length of 100 due to 100 repeats
+mae_total_medians = []  # holds the k-fold median Mean Absolute Error (MAE) value. Will be length of 100 due to 100 repeats
 
-    bestfeaturesM = list(efsmlr.best_feature_names_)
+predicted = []
+y_ls = []
 
-    X, y = predictors_scaled[bestfeaturesM], t
+prediction_certainty_ls = []
+prediction_list = []
 
-    results_dict = funcs.log10_cv_results_and_plot2(gp, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
+for i in range(200):  # for 100 repeats
+    try_cv = KFold(n_splits=5, shuffle=True)
 
-    hold_marsh_weights[key] = results_dict["Scaled Weights"]
-    hold_unscaled_weights[key] = results_dict["Unscaled Weights"]
-    hold_marsh_regularizors[key] = results_dict["Scaled regularizors"]
-    hold_marsh_weight_certainty[key] = results_dict["# Well Determined Weights"]
-    hold_prediction_certainty[key] = results_dict["Standard Deviations of Predictions"]
-    hold_intercept[key] = results_dict["Unscaled Intercepts"]
+    # errors
+    r2_ls = []
+    mae_ls = []
+    # predictions
+    pred_certain = []
+    pred_list = []
+
+    for train_index, test_index in try_cv.split(X):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = target.iloc[train_index], target.iloc[test_index]
+        # Fit the model
+        kernel = (DotProduct() ** 2) + WhiteKernel()
+        gpr = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10, random_state=0, alpha=0.5)
+
+        gpr.fit(np.asarray(X_train), np.asarray(y_train))
+        # predict
+        ypred, ystd = gpr.predict(X_test, return_std=True)
+        pred_list += list(ypred)
+        pred_certain += list(ystd)
+
+        r2 = r2_score(y_test, ypred)
+        r2_ls.append(r2)
+        mae = mean_absolute_error(y_test, ypred)
+        mae_ls.append(mae)
+
+    # Average certainty in predictions
+    prediction_certainty_ls.append(np.mean(pred_certain))
+    prediction_list.append(pred_list)
+
+    # Average predictions over the Kfold first: scaled
+    r2_median = np.median(r2_ls)
+    r2_total_medians.append(r2_median)
+    mae_median = np.median(mae_ls)
+    mae_total_medians.append(mae_median)
+
+    predicted = predicted + list(cross_val_predict(gpr, X, target.values.ravel(), cv=try_cv))
+    y_ls += list(target.values.ravel())
+
+
+# Now calculate the mean of th kfold means for each repeat: scaled accretion
+r2_final_median = np.median(r2_total_medians)
+mae_final_median = np.median(mae_total_medians)
+
+plt.rcParams.update({'font.size': 16})
+fig, ax = plt.subplots(figsize=(9, 8))
+hb = ax.hexbin(x=y_ls,
+               y=predicted,
+               gridsize=30, edgecolors='grey',
+               cmap='YlOrRd', mincnt=1)
+ax.set_facecolor('white')
+ax.set_xlabel("Measured Accretion Rate (mm/yr)")
+ax.set_ylabel("Estimated Accretion Rate (mm/yr)")
+ax.set_title("All Stations GPR")
+cb = fig.colorbar(hb, ax=ax)
+cb.ax.get_yaxis().labelpad = 20
+cb.set_label('Density of Predictions', rotation=270)
+
+ax.plot([target.min(), target.max()], [target.min(), target.max()],
+        "k--", lw=3)
+
+ax.annotate("Median r-squared = {:.3f}".format(r2_final_median), xy=(20, 410), xycoords='axes points',
+            bbox=dict(boxstyle='round', fc='w'),
+            size=15, ha='left', va='top')
+ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 380), xycoords='axes points',
+            bbox=dict(boxstyle='round', fc='w'),
+            size=15, ha='left', va='top')
+plt.show()
+
 
 
 
