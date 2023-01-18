@@ -246,8 +246,13 @@ predictors_scaled = pd.DataFrame(scalar.fit_transform(predictors), columns=predi
 #
 # X = predictors[list(efs.best_feature_names_)]
 
-# Backward feature elimination
-bestfeatures = funcs.backward_elimination(data=predictors_scaled, target=target, num_feats=20, significance_level=0.05)
+# # Backward feature elimination
+# bestfeatures = funcs.backward_elimination(data=predictors_scaled, target=target, num_feats=20, significance_level=0.05)
+# X = predictors_scaled[bestfeatures]
+
+##### I decide to use features that are informed by my split dataset BLR tests
+bestfeatures = ['Tidal Amplitude (cm)', 'NDVI', 'TSS (mg/l)', 'Avg. Flood Depth (cm)', '90th Percentile Flood Depth (cm)',
+                '10th Percentile Flood Depth (cm)', 'Avg. Time Flooded (%)', 'Soil Porewater Salinity (ppt)']
 X = predictors_scaled[bestfeatures]
 
 # ### Now for the actual testing.
@@ -339,6 +344,21 @@ plt.show()
 
 
 # SHAP analysis
+import shap
+
+# Sampling and shap computation for explanation
+gpr.fit(X, target)
+X500 = shap.utils.sample(X, 500)
+print(type(X500))
+
+explainer = shap.Explainer(gpr.predict, X500)
+shap_values = explainer(X)
+
+# Summary plot
+shap.summary_plot(shap_values, features=X, feature_names=X.columns)
+
+#
+
 
 
 
