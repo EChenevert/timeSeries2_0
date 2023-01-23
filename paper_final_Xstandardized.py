@@ -45,6 +45,7 @@ acc = pd.read_csv(r"D:\Etienne\fall2022\agu_data\12172_SEA\Accretion__rate.csv",
     ['Site_ID', 'Acc_rate_fullterm (cm/y)']
 ].groupby('Site_ID').median()
 
+
 ## Data from Gee and Arc
 jrc = pd.read_csv(r"D:\Etienne\summer2022_CRMS\run_experiments\CRMS_GEE_JRCCOPY2.csv", encoding="unicode_escape")[
     ['Simple_sit', 'Land_Lost_m2']
@@ -241,7 +242,8 @@ for key in marshdic:
     print(key)
     mdf = marshdic[key]  # .drop('Community', axis=1)
     # It is preshuffled so i do not think ordering will be a problem
-    t = np.log10(mdf[outcome].reset_index().drop('index', axis=1))
+    # t = np.log10(mdf[outcome].reset_index().drop('index', axis=1))
+    t = mdf[outcome].reset_index().drop('index', axis=1)
     phi = mdf.drop([outcome, 'Community', 'Latitude', 'Longitude',  'Organic Matter (%)', 'Bulk Density (g/cm3)'],
                    axis=1).reset_index().drop('index', axis=1)
     # Scale: because I want feature importances
@@ -278,7 +280,7 @@ for key in marshdic:
 
     baymod = linear_model.BayesianRidge(fit_intercept=True)
 
-    results_dict = funcs.log10_cv_results_and_plot2(baymod, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
+    results_dict = funcs.cv_results_and_plot(baymod, bestfeaturesM, phi, X, y, {'cmap': 'YlOrRd', 'line': "r--"}, str(key))
 
     hold_marsh_weights[key] = results_dict["Scaled Weights"]
     hold_unscaled_weights[key] = results_dict["Unscaled Weights"]
