@@ -588,10 +588,10 @@ def cv_results_and_plot(bay_model, bestfeatures, unscaled_predictor_matrix, pred
     ax.annotate("Median MAE = {:.3f}".format(mae_final_median), xy=(20, 380), xycoords='axes points',
                 bbox=dict(boxstyle='round', fc='w'),
                 size=15, ha='left', va='top')
-    # fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + marsh_key +
-    #             "_scaledX_nolog_cv_human.eps", format='eps',
-    #             dpi=300,
-    #             bbox_inches='tight')
+    fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\" + marsh_key +
+                "_scaledX_nolog_cv_human.eps", format='eps',
+                dpi=300,
+                bbox_inches='tight')
     plt.show()
 
 

@@ -195,7 +195,7 @@ rdf = rdf.drop([  # IM BEING RISKY AND KEEP SHALLOW SUBSIDENCE RATE
 rdf = rdf.rename(columns={
     'Tide_Amp (ft)': 'Tide Amp (ft)',
     'avg_percentflooded (%)': 'Avg. Time Flooded (%)',
-    'windspeed': 'Windspeed',
+    'windspeed': 'Windspeed (m/s)',
     # 'log_distance_to_ocean_km': 'log distance to ocean km',
     # 'Average_Marsh_Elevation (ft. NAVD88)': 'Average Marsh Elevation (ft. NAVD88)',
     'log_distance_to_water_km': 'Log Distance to Water (km)',
@@ -213,6 +213,21 @@ rdf = rdf.rename(columns={
 
 gdf = pd.concat([rdf, udf[['Community', 'Longitude', 'Latitude', 'Organic Matter (%)', 'Bulk Density (g/cm3)']]],
                 axis=1, join='inner')
+# Transform all units to SI units
+gdf['Tidal Amplitude (cm)'] = gdf['Tide Amp (ft)'] * 30.48
+gdf['90th Percentile Flood Depth (cm)'] = gdf['90th Percentile Flood Depth (ft)'] * 30.48
+gdf['10th Percentile Flood Depth (cm)'] = gdf['10th Percentile Flood Depth (ft)'] * 30.48
+gdf['Avg. Flood Depth (cm)'] = gdf['Avg. Flood Depth (ft)'] * 30.48
+gdf['Std. Deviation Flood Depth (cm)'] = gdf['Std. Deviation Flood Depth (ft)'] * 30.48
+# gdf['10th Percentile of Waterlevel to Marsh (cm)'] = gdf['10th Percentile of Waterlevel to Marsh (ft)'] * 30.48
+# gdf['90th Percentile of Waterlevel to Marsh (cm)'] = gdf['90th Percentile of Waterlevel to Marsh (ft)'] * 30.48
+# gdf['Avg. Waterlevel to Marsh (cm)'] = gdf['Avg. Waterlevel to Marsh (ft)'] * 30.48
+# gdf['Std. Deviation of Flooding (cm)'] = gdf['Std. Deviation of Flooding (ft)'] * 30.48
+
+# Delete the old non SI unit variables
+gdf = gdf.drop(['Std. Deviation Flood Depth (ft)', 'Avg. Flood Depth (ft)', '10th Percentile Flood Depth (ft)',
+                '90th Percentile Flood Depth (ft)', 'Tide Amp (ft)'], axis=1)
+
 # Export gdf to file specifically for AGU data and results
 gdf.to_csv("D:\\Etienne\\fall2022\\agu_data\\results\\AGU_dataset.csv")
 
@@ -298,10 +313,10 @@ colormap = {
 'Windspeed': '#70ECE3',
 'Tide Amp (ft)': '#434F93',
 'Avg. Flood Depth (ft)': '#087AFA',
-'Avg. Waterlevel to Marsh (ft)':  '#087AFD',
-'90th Percentile of Waterlevel to Marsh (ft)': '#D001A1',
+# 'Avg. Waterlevel to Marsh (ft)':  '#087AFD',
+# '90th Percentile of Waterlevel to Marsh (ft)': '#D001A1',
 '90th Percentile Flood Depth (ft)': '#D000E1',
-'10th Percentile of Waterlevel to Marsh (ft)': '#73ABAE',
+# '10th Percentile of Waterlevel to Marsh (ft)': '#73ABAE',
 '10th Percentile Flood Depth (ft)': '#73ACAE',
 # 'Std. Deviation of Flooding (ft)': '#DE5100',
 'Std. Deviation Flood Depth (ft)': '#DE5100',
@@ -326,7 +341,7 @@ for key in hold_marsh_weights:
     sns.barplot(list(d['index']), list(d['Means']), palette=palette_ls)
     funcs.wrap_labels(ax, 10)
     fig.subplots_adjust(bottom=0.3)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + str(key) +
+    fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\" + str(key) +
                 "_scaledX_nolog_boxplot_human.eps", format='eps',
                 dpi=300,
                 bbox_inches='tight')
@@ -348,7 +363,7 @@ for key in hold_unscaled_weights:
     boxplot = sns.boxplot(data=hold_unscaled_weights[key], notch=True, showfliers=False, palette=palette_ls)
     funcs.wrap_labels(ax, 10)
     fig.subplots_adjust(bottom=0.3)
-    fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\" + str(
+    fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\" + str(
         key) + "_unscaledWeights_nolog_boxplot_human.eps", format='eps',
                 dpi=300,
                 bbox_inches='tight')
@@ -363,7 +378,7 @@ fig, ax = plt.subplots(figsize=(6, 4))
 ax.set_title('Distribution of Learned Effective Regularization Parameters')
 sns.boxplot(data=eff_reg_df, notch=True, showfliers=False, palette="YlOrBr")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\regularization_scaledX_nolog_boxplot_human.eps",
+fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\regularization_scaledX_nolog_boxplot_human.eps",
             format='eps',
             dpi=300,
             bbox_inches='tight')
@@ -379,7 +394,7 @@ fig, ax = plt.subplots(figsize=(6, 4))
 ax.set_title('Distribution of Calculated Number of Well Determined Parameters')
 sns.boxplot(data=certainty_df, notch=True, showfliers=False, palette="Blues")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\certainty_scaledX_nolog_boxplot_human.eps",
+fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\certainty_scaledX_nolog_boxplot_human.eps",
             format='eps',
             dpi=300,
             bbox_inches='tight')
@@ -396,7 +411,7 @@ ax.set_title('Distribution of Intercepts [Unscaled]:')
 ax.axhline(0, ls='--')
 sns.boxplot(data=intercept_df, notch=True, showfliers=False, palette="coolwarm")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\intercepts_nolog_boxplot_human.eps", dpi=300,
+fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\intercepts_nolog_boxplot_human.eps", dpi=300,
             format='eps',
             bbox_inches='tight')
 plt.show()
@@ -411,7 +426,7 @@ fig, ax = plt.subplots(figsize=(6, 4))
 ax.set_title('Distribution of Bayesian Uncertainty in Predictions')
 sns.boxplot(data=pred_certainty_df, notch=True, showfliers=False, palette="Reds")
 funcs.wrap_labels(ax, 10)
-fig.savefig("D:\\Etienne\\fall2022\\agu_data\\results\\scaled_X_LOG\\pred_certainty_scaledX_nolog_boxplot_human.eps",
+fig.savefig("D:\\Etienne\\PAPER_2023\\results_BLR\\pred_certainty_scaledX_nolog_boxplot_human.eps",
             dpi=300, format='eps',
             bbox_inches='tight')
 plt.show()
